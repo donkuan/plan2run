@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1D5BC4">
+<meta name="description" content="Workout paces from a race result or VDOT: sub-threshold, threshold, VO2max and race-specific sessions.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Workout Pace Library</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600&family=Source+Sans+3:wght@400;600;700&display=swap">
+<style>
+html{-webkit-text-size-adjust:100%}
+body{margin:0}
+[hidden]{display:none!important}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+/* Layout: a training-log sheet. Control bar on top (race result -> VDOT -> HR), a pace reference strip, then workout tables by category. */
+:root{
+  --bg:#F4F6F9; --card:#FFFFFF; --fg:#151922; --muted:#5A6272; --line:#D8DDE6; --soft:#EBEEF3;
+  --accent:#1D5BC4; --accent-ink:#FFFFFF;
+  --c-subt:#23845A; --c-thr:#B97A00; --c-vo2:#C2372C; --c-race:#5B47B8; --c-sup:#5A6272;
+  --display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --body:"Source Sans 3","Segoe UI",system-ui,-apple-system,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E1117; --card:#161A22; --fg:#E6E9EF; --muted:#9AA3B3; --line:#2A303C; --soft:#1D222C;
+  --accent:#6E9FFF; --accent-ink:#0E1117;
+  --c-subt:#4CC28A; --c-thr:#E2AE3C; --c-vo2:#F0716A; --c-race:#A493F2; --c-sup:#9AA3B3; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E1117; --card:#161A22; --fg:#E6E9EF; --muted:#9AA3B3; --line:#2A303C; --soft:#1D222C;
+  --accent:#6E9FFF; --accent-ink:#0E1117;
+  --c-subt:#4CC28A; --c-thr:#E2AE3C; --c-vo2:#F0716A; --c-race:#A493F2; --c-sup:#9AA3B3; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:24px 48px}
+.wrap{max-width:1080px;margin:0 auto;display:grid;gap:24px}
+h1,h2,h3{font-family:var(--display);font-weight:700;letter-spacing:.01em;text-wrap:balance;margin:0;line-height:1.05}
+h1{font-size:clamp(34px,6vw,52px);text-transform:uppercase}
+h2{font-size:26px;text-transform:uppercase}
+.lede{color:var(--muted);max-width:65ch;margin:6px 0 0}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px}
+.controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;align-items:stretch}
+.ctl{display:grid;gap:8px;align-content:start;min-width:0}
+.label{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+select,input[type=text],input[type=number]{font:inherit;color:var(--fg);background:var(--soft);border:1px solid var(--line);border-radius:6px;padding:8px 10px;width:100%;min-width:0}
+input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.vdot{display:flex;align-items:baseline;gap:10px}
+.vdot b{font-family:var(--display);font-size:64px;line-height:.9;color:var(--accent);font-variant-numeric:tabular-nums}
+.vdot span{color:var(--muted);font-size:13px}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.hint{font-size:13px;color:var(--muted)}
+.err{font-size:13px;color:var(--c-vo2)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg button{font:inherit;font-size:13px;background:var(--soft);color:var(--fg);border:0;padding:6px 12px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);font-weight:600}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600;white-space:nowrap}
+td.p{font-family:var(--mono);font-size:14px;white-space:nowrap;font-weight:600}
+td.p small{display:block;font-weight:500;color:var(--muted);font-size:12px}
+tr:last-child td{border-bottom:0}
+.ref table td:first-child{font-weight:600}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{font:inherit;font-size:14px;border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:999px;padding:5px 12px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.chip i{width:9px;height:9px;border-radius:50%;background:var(--dot,var(--muted))}
+.chip[aria-pressed="true"]{border-color:var(--fg);box-shadow:inset 0 0 0 1px var(--fg)}
+section.cat{display:grid;gap:10px}
+.cathead{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 14px;border-left:5px solid var(--dot);padding-left:12px}
+.cathead p{margin:0;color:var(--muted);max-width:70ch}
+.wname{font-weight:700}
+.note{color:var(--muted);font-size:13.5px;min-width:220px}
+.tag{font-size:11px;text-transform:uppercase;letter-spacing:.07em;font-weight:700;color:var(--dot);margin-left:6px}
+.phase td:first-child{font-weight:700;white-space:nowrap}
+footer{color:var(--muted);font-size:13px;max-width:75ch}
+@media (max-width:520px){.vdot b{font-size:52px}}
+@media (prefers-reduced-motion:no-preference){.chip,.seg button{transition:background .15s,box-shadow .15s}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <h1>Workout Pace Library</h1>
+    <p class="lede">Enter a recent race result or set a VDOT, and every session below updates to your paces. Opens with your 1:23:22 half (27 Sep 2026). Race paces are Jack Daniels VDOT predictions; HR targets come from your max and threshold heart rate.</p>
+  </header>
+
+  <div class="panel controls" role="group" aria-label="Inputs">
+    <div class="ctl">
+      <span class="label">Race result</span>
+      <div class="row2">
+        <select id="dist" aria-label="Race distance">
+          <option value="1500">1500 m</option>
+          <option value="1609.344">Mile</option>
+          <option value="3000">3K</option>
+          <option value="5000">5K</option>
+          <option value="10000">10K</option>
+          <option value="15000">15K</option>
+          <option value="21097.5" selected>Half marathon</option>
+          <option value="42195">Marathon</option>
+        </select>
+        <input id="time" type="text" inputmode="numeric" value="1:23:22" aria-label="Finish time (h:mm:ss or mm:ss)">
+      </div>
+      <span class="hint" id="timeHint">Format h:mm:ss or mm:ss</span>
+    </div>
+    <div class="ctl">
+      <span class="label">VDOT</span>
+      <div class="vdot"><b id="vdotOut">55.7</b><span id="vdotSrc">from your half</span></div>
+      <input id="vdotRange" type="range" min="35" max="75" step="0.1" value="55.7" aria-label="VDOT">
+      <span class="hint">Drag to plan for a goal. Marathon 2:49 needs about VDOT 57.7.</span>
+    </div>
+    <div class="ctl">
+      <span class="label">Heart rate</span>
+      <div class="row2">
+        <label class="hint" for="maxhr">Max HR<input id="maxhr" type="number" min="140" max="230" value="188"></label>
+        <label class="hint" for="lthr">Threshold HR<input id="lthr" type="number" min="120" max="220" value="166"></label>
+        <label class="hint" for="hrSub">Sub-threshold cap<input id="hrSub" type="number" min="100" max="220" placeholder="auto"></label>
+        <label class="hint" for="hrEasy">Easy cap<input id="hrEasy" type="number" min="90" max="200" placeholder="auto"></label>
+        <label class="hint" for="hrVo2">VO2max check<input id="hrVo2" type="number" min="120" max="230" placeholder="auto"></label>
+      </div>
+      <span class="hint" id="hrHint">Empty fields follow the defaults: sub-threshold cap 5 below threshold HR (same cap for every rep length), easy 60–70% of max (the field sets the upper limit), VO2max check 93% of max. The VO2max check is a minimum to reach in the last reps, not a cap.</span>
+      <button class="chip" id="hrReset" type="button" style="justify-self:start">Reset HR to defaults</button>
+      <span class="label">Units</span>
+      <div class="seg" role="group" aria-label="Units">
+        <button id="uKm" aria-pressed="true">min/km</button><button id="uMi" aria-pressed="false">min/mile</button>
+      </div>
+    </div>
+  </div>
+
+  <section class="panel ref">
+    <h2>Your paces</h2>
+    <p class="hint" style="margin:4px 0 10px">Predicted race times at this VDOT and the training paces they set.</p>
+    <div class="scroll"><table id="refTable"></table></div>
+  </section>
+
+  <div class="chips" id="chips" role="group" aria-label="Filter categories"></div>
+
+  <div id="cats" style="display:grid;gap:28px"></div>
+
+  <section class="panel">
+    <h2>When to use what</h2>
+    <div class="scroll"><table class="phase">
+      <thead><tr><th>Phase</th><th>Weeks</th><th>Per week</th><th>Main sessions</th></tr></thead>
+      <tbody>
+        <tr><td>Base</td><td>10-14</td><td>2 sub-threshold + 1 long run + strides; VO2max every 1-2 weeks</td><td>Sub-threshold menu, short VO2max, long run building to 25-28 km</td></tr>
+        <tr><td>Transition</td><td>2</td><td>As base, slightly longer reps</td><td>First race-pace blocks, no killer sessions</td></tr>
+        <tr><td>Specific</td><td>4</td><td>1 sub-threshold + 1 race-specific + 1 long run</td><td>The race tables; marathon: long runs with marathon pace</td></tr>
+        <tr><td>Taper</td><td>1-2</td><td>Volume down 30-50%</td><td>Short race-pace pieces and strides; nothing new</td></tr>
+        <tr><td>Travel, 3 runs</td><td>any</td><td>1 quality + 1 long + 1 easy</td><td>Alternate VO2max and sub-threshold weekly; hikes replace long runs</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <footer>Race predictions use Daniels and Gilbert's VDOT equations; threshold pace is about 88% of VO2max and easy pace 60-70%. Treat them as starting points: let the HR cap rule a sub-threshold session, run at altitude by effort, and reset the VDOT after every race. Two rules from autumn 2026: no single week far above your normal volume, and no all-out race within 4 weeks of a marathon.</footer>
+</div>
+
+<script>
+(function(){
+  // ---- VDOT model (Daniels & Gilbert) ----
+  const vo2 = v => -4.60 + 0.182258*v + 0.000104*v*v;              // v in m/min
+  const pct = t => 0.8 + 0.1894393*Math.exp(-0.012778*t) + 0.2989558*Math.exp(-0.1932605*t); // t in min
+  const vdotOf = (d,t) => vo2(d/t)/pct(t);
+  function raceMin(vd,d){let lo=d/1000*1.2,hi=d/1000*25;for(let i=0;i<70;i++){const m=(lo+hi)/2;if(vdotOf(d,m)>vd)lo=m;else hi=m;}return (lo+hi)/2;}
+  const vAtVO2 = V => (-0.182258+Math.sqrt(0.182258**2+4*0.000104*(V+4.6)))/(2*0.000104);
+
+  const KM_PER_MI = 1.609344;
+  const S = {vd:55.7, unit:'km', maxhr:188, lthr:166, dist:'21097.5', time:'1:23:22', fromRace:true, filter:'all'};
+  try{const s=JSON.parse(localStorage.getItem('wpl-state')||'null'); if(s) Object.assign(S,s);}catch(e){}
+  const save=()=>{try{localStorage.setItem('wpl-state',JSON.stringify(S));}catch(e){}};
+
+  // pace helpers, all in seconds per km
+  let R,T,E;
+  function compute(){
+    const cache={};
+    R = d => cache[d] ?? (cache[d] = raceMin(S.vd,d)*60/(d/1000));
+    T = 60000/vAtVO2(0.88*S.vd);
+    E = [60000/vAtVO2(0.70*S.vd), 60000/vAtVO2(0.60*S.vd)];
+  }
+  const M=42195, HM=21097.5;
+
+  function mmss(sec){sec=Math.round(sec);const h=Math.floor(sec/3600),m=Math.floor(sec%3600/60),s=sec%60;return h?`${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`:`${m}:${String(s).padStart(2,'0')}`;}
+  const u = s => S.unit==='km' ? s : s*KM_PER_MI;
+  const uLbl = () => S.unit==='km' ? '/km' : '/mi';
+  function rng(a,b){ if(b==null||Math.round(a)===Math.round(b)) return mmss(u(a)); return `${mmss(u(Math.min(a,b)))}–${mmss(u(Math.max(a,b)))}`; }
+  function repTime(r,dist){ return `${mmss(Math.min(r[0],r[1])*dist/1000)}–${mmss(Math.max(r[0],r[1])*dist/1000)}`; }
+
+  // HR targets
+  if(!S.ov) S.ov={sub:null,easy:null,vo2:null};
+  const HR = {
+    sub:  () => S.ov.sub ?? S.lthr-5,
+    easy: () => S.ov.easy ?? Math.round(S.maxhr*0.70),
+    vo2:  () => S.ov.vo2 ?? Math.round(S.maxhr*0.93)
+  };
+  const hr = {
+    easy: () => `${Math.min(Math.round(S.maxhr*0.60),HR.easy())}–${HR.easy()}`,
+    subS: () => `cap ${HR.sub()}`,
+    subL: () => `cap ${HR.sub()}`,
+    mp:   () => `${S.lthr-16}–${HR.sub()}`,
+    thr:  () => `${S.lthr-2}–${S.lthr+2}`,
+    b45:  () => `${Math.round(S.maxhr*0.80)}–${Math.round(S.maxhr*0.95)} (80–95% max), top end only in the last reps`,
+    vo2:  () => `check: ${HR.vo2()}+ in the last reps (3–4 min reps only)`,
+    race: () => '',
+    none: () => ''
+  };
+
+  // ---- Workout catalogue ----
+  // p: function -> [fast, slow] s/km ; rep: metres per rep for rep times ; extra: secondary pace
+  const CATS = [
+    {id:'subt', name:'Sub-threshold', color:'--c-subt', when:'2 sessions a week all year. Controlled, finish feeling you could do 1-2 more reps. Start with your standard 5-min opener rep.', items:[
+      {n:'10 × 3 min', rest:'60 s jog', p:()=>[R(15000),R(HM)], hr:'subS', note:'Fastest sub-threshold option, closest to VO2max.'},
+      {n:'45/15s: 15–20 × 45 s on, then 2 min, then 5 more', rest:'15 s jog or stand', p:()=>[R(10000),R(HM)], extra:{l:'Each 45 s ≈', p:()=>null}, hr:'subS', note:'Marius Bakken, held under your cap. Start at half-marathon pace, get a little faster each rep, finish around 10K pace. HR keeps climbing because the rest is only 15 s, so stop progressing once you reach the cap. His standard (harder) version is under Threshold.'},
+      {n:'8 × 1000 m', rest:'60 s jog', rep:1000, p:()=>[R(15000),R(HM)], hr:'subS', note:'Same session on a track or measured loop.'},
+      {n:'5 × 6 min', rest:'60 s jog', p:()=>[R(HM),R(HM)+5], hr:'subS', note:'The classic middle session.'},
+      {n:'25 × 400 m', rest:'30 s standing', rep:400, p:()=>[R(10000),R(10000)+3], hr:'subS', note:'Almgren: 10 km at 10K pace, threshold intensity because of the short rest.'},
+      {n:'4 × 8 min or 3 × 10 min', rest:'90 s jog', p:()=>[R(25000),R(30000)], hr:'subL', note:'Longer reps at a lower pace.'},
+      {n:'2 × 15 min or 3 × 17 min', rest:'2–2.5 min jog', p:()=>[R(M)-3,R(M)+5], hr:'mp', note:'Marathon-pace sub-threshold, from your own build.'}
+    ]},
+    {id:'thr', name:'Threshold', color:'--c-thr', when:'Right at threshold, harder than sub-threshold. Every 2-3 weeks at most, mainly in a 10K or half block.', items:[
+      {n:'3 × 2 km', rest:'2 min jog', rep:2000, p:()=>[T,T+3], hr:'thr', note:''},
+      {n:'4 × 2.5 km', rest:'2 min jog', rep:2500, p:()=>[T+2,T+5], hr:'thr', note:''},
+      {n:'20–25 min continuous', rest:'none', p:()=>[T+3,T+8], hr:'thr', note:'Good fitness check: compare pace at the same HR every few weeks.'},
+      {n:'2 × 20 min', rest:'3 min jog', p:()=>[T+5,T+10], hr:'thr', note:''},
+      {n:'45/15s, Bakken standard: 15–30 × 45 s on', rest:'15 s standing, walking or light jog', p:()=>[R(4000),R(12500)], extra:{l:'Each 45 s ≈', p:()=>null}, hr:'b45', note:'From his book: start at 10–15K pace and progress toward 3–5K pace (e.g. a little faster each rep, or in groups of 5). Build volume over 8 weeks: 15, 20, 25, then 30 reps or 2 × 15 with 1–2 min between. Harder than the sub-threshold version, so count it as your threshold session that week.'}
+    ]},
+    {id:'vo2', name:'VO2max', color:'--c-vo2', when:'Every 1-2 weeks in base, weekly in a 5K or 10K block. Recoveries long enough to hit the pace again; stop when form breaks.', items:[
+      {n:'5 × 3 min', rest:'2–3 min jog', p:()=>[R(3000),R(5000)], hr:'vo2', note:'The classic, at 3K-5K effort.'},
+      {n:'6 × 1000 m', rest:'2 min jog', rep:1000, p:()=>[R(5000)-3,R(5000)], hr:'vo2', note:''},
+      {n:'12–20 × 30 s on / 30 s off', rest:'30 s float', p:()=>[R(1500),R(3000)], extra:{l:'Float', p:()=>[E[0]-15,E[0]+15]}, hr:'vo2', note:'Lots of time near VO2max with little stress per rep.'},
+      {n:'8–10 × 60–90 s uphill', rest:'jog down', effort:'Hard, not sprinting', hr:'vo2', note:'Gentle on tendons; good for your posterior tibial history.'},
+      {n:'20 × 400 m', rest:'1 min standing', rep:400, p:()=>[R(5000),R(5000)+2], hr:'vo2', note:'Almgren: 8 km at 5K pace, his 5K-specific threshold version.'},
+      {n:'5 × 4 min on the bike', rest:'3 min easy', effort:'106–120% FTP', hr:'vo2', note:'VO2max stimulus without running impact.'}
+    ]},
+    {id:'k5', name:'5K-specific', color:'--c-race', race:5000, when:'Final 4-6 weeks before a 5K. One a week replaces a sub-threshold session.', items:[
+      {n:'20 × 400 m', rest:'1 min', rep:400, p:()=>[R(5000)-1,R(5000)+1], hr:'race', note:''},
+      {n:'5 × 1000 m', rest:'2 min jog', rep:1000, p:()=>[R(5000)-3,R(5000)], hr:'race', note:''},
+      {n:'3 × 1600 m', rest:'2–3 min jog', rep:1600, p:()=>[R(5000),R(5000)+2], hr:'race', note:''},
+      {n:'2 × (5 × 400 m)', rest:'45 s; 3 min between sets', rep:400, p:()=>[R(5000)-6,R(5000)-2], hr:'race', note:'Cut down through each set.'}
+    ]},
+    {id:'k10', name:'10K-specific', color:'--c-race', race:10000, when:'Final 4-6 weeks before a 10K.', items:[
+      {n:'8 × 1000 m', rest:'1 min', rep:1000, p:()=>[R(10000)-5,R(10000)-3], hr:'race', note:'Almgren: just faster than race pace (2:37 vs about 2:41 for him). Final key session 10-14 days out.'},
+      {n:'25 × 400 m', rest:'30 s', rep:400, p:()=>[R(10000),R(10000)+2], hr:'race', note:''},
+      {n:'5 × 2 km', rest:'90 s jog', rep:2000, p:()=>[R(10000)-2,R(10000)], hr:'race', note:''},
+      {n:'3 × 3 km', rest:'2 min jog', rep:3000, p:()=>[R(10000),R(10000)+2], hr:'race', note:''}
+    ]},
+    {id:'hm', name:'Half-marathon-specific', color:'--c-race', race:HM, when:'Final 4-6 weeks before a half.', items:[
+      {n:'4 × 4 km', rest:'90 s jog', rep:4000, p:()=>[R(HM)-3,R(HM)], hr:'race', note:''},
+      {n:'3 × 5 km', rest:'2 min jog', rep:5000, p:()=>[R(HM)-1,R(HM)+1], hr:'race', note:''},
+      {n:'2 × 6 km', rest:'2 min jog', rep:6000, p:()=>[R(HM),R(HM)+4], hr:'race', note:''},
+      {n:'8 × 2 km', rest:'60 s float', rep:2000, p:()=>[R(HM)-3,R(HM)-1], extra:{l:'Float', p:()=>[R(M)+15,R(M)+25]}, hr:'race', note:''},
+      {n:'15 km progression', rest:'none', p:()=>[R(HM)-2,R(M)], hr:'race', note:'Start at marathon pace, finish just under half pace.'}
+    ]},
+    {id:'mar', name:'Marathon-specific', color:'--c-race', race:M, when:'The long run is the key session. Every 7-10 days in the specific phase. Rehearse fuelling (a gel every 6 km) and race shoes.', items:[
+      {n:'28–30 km, last 12–16 km at marathon pace', rest:'none', p:()=>[R(M)-2,R(M)+3], extra:{l:'First part', p:()=>E}, hr:'mp', note:'The core session.'},
+      {n:'30 km with 3 × 5 km at marathon pace', rest:'1 km easy between', rep:5000, p:()=>[R(M)-2,R(M)+3], hr:'mp', note:'Breaks the pace into pieces early in the phase.'},
+      {n:'2 × 8 km at marathon pace', rest:'1 km float', rep:8000, p:()=>[R(M)-2,R(M)+3], extra:{l:'Float', p:()=>[R(M)+15,R(M)+25]}, hr:'mp', note:'Inside a 22-25 km run.'},
+      {n:'12–16 km alternating 1 km MP / 1 km float', rest:'continuous', p:()=>[R(M)-2,R(M)+3], extra:{l:'Float', p:()=>[R(M)+15,R(M)+25]}, hr:'mp', note:'Teaches clearing lactate at pace.'},
+      {n:'32 km progressive', rest:'none', p:()=>[R(M),E[1]], hr:'mp', note:'Easy down to marathon pace. Final long run, 3-4 weeks out.'},
+      {n:'3 × 17 min', rest:'2.5 min jog', p:()=>[R(M)-2,R(M)+5], hr:'mp', note:'Mid-week marathon session.'}
+    ]},
+    {id:'sup', name:'Support work', color:'--c-sup', when:'Short additions that build the durability your quads lacked in The Hague.', items:[
+      {n:'Strides 6–8 × 20 s', rest:'walk back', p:()=>[R(1500)-5,R(1500)+5], hr:'none', note:'Relaxed and fast, 1-2 × a week after easy runs.'},
+      {n:'Hill sprints 6–8 × 10 s', rest:'walk down', effort:'Full effort', hr:'none', note:'Power and tendon stiffness at low risk, 1 × a week.'},
+      {n:'Hills at the end of the long run', rest:'jog down', effort:'4–6 × 30 s uphill, hard', hr:'none', note:'Fatigue resistance, every long run.'},
+      {n:'Controlled downhill 4–6 × 200 m', rest:'walk up', p:()=>E, hr:'easy', note:'Braking (eccentric) strength for the quads, 1 × a week in base.'},
+      {n:'Strength 20–25 min', rest:'', effort:'Step-downs, split squats, lunges, single-leg calf raises, hip abduction', hr:'none', note:'2 × a week: quads, posterior tibial tendon and hips.'},
+      {n:'Easy run', rest:'', p:()=>E, hr:'easy', note:'Slower is fine; this is where the volume comes from.'}
+    ]}
+  ];
+
+  // ---- UI wiring ----
+  const $ = id => document.getElementById(id);
+  const parseTime = str => { const p=str.trim().split(':').map(Number); if(p.some(isNaN)||!p.length||p.length>3) return null; let s=0; for(const x of p) s=s*60+x; return s>0?s:null; };
+
+  function fromRace(){
+    const sec=parseTime($('time').value), d=parseFloat($('dist').value);
+    const hint=$('timeHint');
+    if(!sec){hint.textContent='Enter a time like 1:23:22 or 18:10'; hint.className='err'; return;}
+    const vd=vdotOf(d,sec/60);
+    if(!(vd>25&&vd<90)){hint.textContent='That time is outside the model range; check distance and time.'; hint.className='err'; return;}
+    hint.textContent='Format h:mm:ss or mm:ss'; hint.className='hint';
+    S.vd=Math.round(vd*10)/10; S.fromRace=true; S.dist=$('dist').value; S.time=$('time').value;
+    render();
+  }
+
+  function render(){
+    compute();
+    $('vdotOut').textContent=S.vd.toFixed(1);
+    $('vdotRange').value=S.vd;
+    const opt=$('dist').selectedOptions[0];
+    $('vdotSrc').textContent = S.fromRace ? `from your ${opt.textContent.toLowerCase()} of ${S.time}` : 'set by hand';
+    $('uKm').setAttribute('aria-pressed',S.unit==='km'); $('uMi').setAttribute('aria-pressed',S.unit==='mi');
+
+    // reference table
+    const races=[['1500 m',1500],['Mile',1609.344],['3K',3000],['5K',5000],['10K',10000],['15K',15000],['Half marathon',HM],['Marathon',M]];
+    let h=`<thead><tr><th>Intensity</th><th>Predicted time</th><th>Pace ${uLbl()}</th><th>Per 400 m</th><th>HR</th></tr></thead><tbody>`;
+    for(const [l,d] of races){ const p=R(d); h+=`<tr><td>${l}</td><td class="p">${mmss(raceMin(S.vd,d)*60)}</td><td class="p">${mmss(u(p))}</td><td class="p">${mmss(p*0.4)}</td><td></td></tr>`; }
+    h+=`<tr><td>Threshold (T)</td><td></td><td class="p">${mmss(u(T))}</td><td class="p">${mmss(T*0.4)}</td><td>${hr.thr()}</td></tr>`;
+    h+=`<tr><td>Easy</td><td></td><td class="p">${rng(E[0],E[1])}</td><td></td><td>${hr.easy()}</td></tr></tbody>`;
+    $('refTable').innerHTML=h;
+
+    // chips
+    const chips=[{id:'all',name:'All',color:'--fg'},...CATS];
+    $('chips').innerHTML=chips.map(c=>`<button class="chip" data-f="${c.id}" aria-pressed="${S.filter===c.id}" style="--dot:var(${c.color})"><i></i>${c.name}</button>`).join('');
+    $('chips').querySelectorAll('button').forEach(b=>b.onclick=()=>{S.filter=b.dataset.f;save();render();});
+
+    // categories
+    $('cats').innerHTML=CATS.filter(c=>S.filter==='all'||S.filter===c.id).map(c=>{
+      const racep = c.race ? ` <span class="tag">race pace ${mmss(u(R(c.race)))}${uLbl()}</span>` : '';
+      const rows=c.items.map(w=>{
+        let pace='', rep='';
+        if(w.p){ const r=w.p(); pace=`${rng(r[0],r[1])}<small>${uLbl()}</small>`; if(w.rep) rep=repTime(r,w.rep);
+          if(w.extra){ const x=w.extra.p(); pace+= x ? `<small>${w.extra.l} ${rng(x[0],x[1])}</small>` : `<small>${w.extra.l} ${Math.round(45000/Math.max(r[0],r[1]))}–${Math.round(45000/Math.min(r[0],r[1]))} m</small>`; } }
+        else pace=`<span style="font-family:var(--body);font-weight:600">${w.effort}</span>`;
+        return `<tr><td class="wname">${w.n}</td><td>${w.rest}</td><td class="p">${pace}</td><td class="p">${rep}</td><td>${hr[w.hr]()}</td><td class="note">${w.note}</td></tr>`;
+      }).join('');
+      return `<section class="cat" style="--dot:var(${c.color})"><div class="cathead"><h2>${c.name}</h2>${racep}<p>${c.when}</p></div>
+        <div class="panel scroll" style="padding:4px 8px"><table><thead><tr><th>Session</th><th>Recovery</th><th>Pace</th><th>Rep time</th><th>HR</th><th>Notes</th></tr></thead><tbody>${rows}</tbody></table></div></section>`;
+    }).join('');
+    save();
+  }
+
+  // init inputs from state
+  $('dist').value=S.dist; $('time').value=S.time; $('maxhr').value=S.maxhr; $('lthr').value=S.lthr;
+  $('dist').addEventListener('change',fromRace);
+  $('time').addEventListener('change',fromRace);
+  $('time').addEventListener('keydown',e=>{if(e.key==='Enter')fromRace();});
+  $('vdotRange').addEventListener('input',e=>{S.vd=parseFloat(e.target.value);S.fromRace=false;render();});
+  $('maxhr').addEventListener('change',e=>{const v=parseInt(e.target.value);if(v>140&&v<230){S.maxhr=v;render();}});
+  $('lthr').addEventListener('change',e=>{const v=parseInt(e.target.value);if(v>120&&v<220){S.lthr=v;render();}});
+  const ovMap={hrSub:'sub',hrEasy:'easy',hrVo2:'vo2'};
+  const syncOv=()=>{for(const [id,k] of Object.entries(ovMap)){const el=$(id);el.value=S.ov[k]??'';el.placeholder=`auto ${HR[k]()}`;}};
+  for(const [id,k] of Object.entries(ovMap)){
+    $(id).addEventListener('change',e=>{const v=parseInt(e.target.value);S.ov[k]=(v>80&&v<230)?v:null;render();syncOv();});
+  }
+  $('hrReset').onclick=()=>{S.ov={sub:null,easy:null,vo2:null};render();syncOv();};
+  $('maxhr').addEventListener('change',syncOv);
+  $('lthr').addEventListener('change',syncOv);
+  $('uKm').onclick=()=>{S.unit='km';render();};
+  $('uMi').onclick=()=>{S.unit='mi';render();};
+  if(S.fromRace){ const sec=parseTime(S.time); if(sec) S.vd=Math.round(vdotOf(parseFloat(S.dist),sec/60)*10)/10; }
+  render();
+  syncOv();
+})();
+</script>
+
+<script>
+if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));}
+</script>
+</body>
+</html>
