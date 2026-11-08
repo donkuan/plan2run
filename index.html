@@ -63,6 +63,23 @@ th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);verti
 th{font-size:12px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600;white-space:nowrap}
 td.p{font-family:var(--mono);font-size:14px;white-space:nowrap;font-weight:600}
 td.p small{display:block;font-weight:500;color:var(--muted);font-size:12px}
+.cond summary{cursor:pointer;display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;list-style:none}
+.cond summary::-webkit-details-marker{display:none}
+.cond summary::before{content:'▸';color:var(--muted);font-size:14px;transition:transform .15s}
+.cond[open] summary::before{transform:rotate(90deg)}
+.h2like{font-family:var(--display);font-weight:700;font-size:26px;text-transform:uppercase;line-height:1.05}
+#condSum{font-weight:600}
+.condgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-top:12px}
+fieldset.cset{border:1px solid var(--line);border-radius:8px;padding:10px 12px 12px;margin:0;min-width:0}
+fieldset.cset legend{font-weight:700;padding:0 6px}
+.cf{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cf select{font-size:14px}
+.tog{display:flex;align-items:center;gap:8px;font-weight:600;font-size:14px;margin:2px 0 10px;cursor:pointer}
+.tog input{width:18px;height:18px;accent-color:var(--accent)}
+.csum{margin:10px 0 0;font-size:14px}
+.csum b{color:var(--accent)}
+.csum .warn{color:var(--c-vo2)}
+td.p small.pl{font-family:var(--body);font-weight:600;color:var(--dot,var(--muted));font-size:12.5px;white-space:normal}
 tr:last-child td{border-bottom:0}
 .ref table td:first-child{font-weight:600}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
@@ -155,13 +172,56 @@ ol.ex span.d{display:block;color:var(--muted)}
       <div class="seg" role="group" aria-label="Units">
         <button id="uKm" aria-pressed="true">min/km</button><button id="uMi" aria-pressed="false">min/mile</button>
       </div>
+      <span class="label">Intervals</span>
+      <div class="seg" role="group" aria-label="Show intervals as">
+        <button id="rTime" aria-pressed="true">Time</button><button id="rDist" aria-pressed="false">Distance</button>
+      </div>
     </div>
   </div>
+
+  <details class="panel cond" id="condPanel">
+    <summary><span class="h2like">Conditions</span><span class="hint" id="condSum">Adjust paces and your VDOT for heat, hills and wind</span></summary>
+    <div class="condgrid">
+      <fieldset class="cset" id="cw">
+        <legend>Today's workout</legend>
+        <label class="tog"><input type="checkbox" data-k="on"> Apply to the workout paces</label>
+        <div class="cf">
+          <label class="hint">Temperature °C<input type="number" data-k="temp" step="1" placeholder="e.g. 18"></label>
+          <label class="hint">Dew point °C<input type="number" data-k="dew" step="1" placeholder="e.g. 12"></label>
+          <label class="hint">Climb per km (m)<input type="number" data-k="hill" min="0" step="1" placeholder="0"></label>
+          <label class="hint">Route<select data-k="hillType"><option value="loop">Loop</option><option value="up">Uphill only</option><option value="down">Downhill only</option></select></label>
+          <label class="hint">Wind km/h<input type="number" data-k="wind" min="0" step="1" placeholder="0"></label>
+          <label class="hint">Wind direction<select data-k="windType"><option value="oab">Out-and-back</option><option value="cross">Crosswind</option><option value="head">Headwind</option><option value="tail">Tailwind</option></select></label>
+          <label class="hint">Shelter<select data-k="shelter"><option value="1">Exposed</option><option value="0.8">Light cover</option><option value="0.6">Urban or forest</option></select></label>
+          <label class="hint">Surface<select data-k="surface"><option value="1">Road or track</option><option value="1.025">Gravel or dirt</option></select></label>
+        </div>
+        <p class="csum" id="cwSum"></p>
+      </fieldset>
+      <fieldset class="cset" id="cr">
+        <legend>Race result conditions</legend>
+        <label class="tog"><input type="checkbox" data-k="on"> Adjust the VDOT from my race result</label>
+        <div class="cf">
+          <label class="hint">Temperature °C<input type="number" data-k="temp" step="1" placeholder="e.g. 18"></label>
+          <label class="hint">Dew point °C<input type="number" data-k="dew" step="1" placeholder="e.g. 12"></label>
+          <label class="hint">Total climb (m)<input type="number" data-k="climb" min="0" step="1" placeholder="0"></label>
+          <label class="hint">Route<select data-k="route"><option value="loop">Loop</option><option value="p2p">Point to point</option></select></label>
+          <label class="hint" id="crDesc">Total descent (m)<input type="number" data-k="descent" min="0" step="1" placeholder="0"></label>
+          <label class="hint" style="grid-column:1">Wind km/h<input type="number" data-k="wind" min="0" step="1" placeholder="0"></label>
+          <label class="hint">Wind direction<select data-k="windType"><option value="oab">Out-and-back</option><option value="cross">Crosswind</option><option value="head">Headwind</option><option value="tail">Tailwind</option></select></label>
+          <label class="hint">Shelter<select data-k="shelter"><option value="1">Exposed</option><option value="0.8">Light cover</option><option value="0.6">Urban or forest</option></select></label>
+          <label class="hint">Surface<select data-k="surface"><option value="1">Road or track</option><option value="1.025">Gravel or dirt</option></select></label>
+        </div>
+        <p class="csum" id="crSum"></p>
+      </fieldset>
+    </div>
+    <div class="hint" style="margin-top:10px">From James Copeland's Norwegian Singles Method: heat by temperature and dew point (whichever is worse), hills as climb and descent per km, wind for an out-and-back or loop (head- and tailwind) unless you pick one direction. Exposed means seafront or track; light cover is trees or a park (wind effect −20%); urban or forest −40%. Route “Loop” covers loops and out-and-backs. For a point-to-point race, the climb matched by descent counts as rolling terrain and the rest as a net uphill or downhill. Gravel or dirt adds 2.5%.</div>
+  </details>
 
   <section class="panel ref">
     <h2>Your paces</h2>
     <p class="hint" style="margin:4px 0 10px">Predicted race times at this VDOT and the training paces they set.</p>
     <div class="scroll"><table id="refTable"></table></div>
+    <div class="hint" id="condNote" hidden style="margin-top:8px"></div>
   </section>
 
   <div class="chips" id="chips" role="group" aria-label="Filter categories"></div>
@@ -201,6 +261,7 @@ ol.ex span.d{display:block;color:var(--muted)}
           <tr><td>In-season</td><td>Lower</td><td>2–3 × 3–5, moved fast</td><td>Maximum explosiveness, keep the strength</td></tr>
         </tbody>
       </table></div>
+      <p class="hint" style="margin:8px 0 0">Based on Andreas Almgren's routine from his book: 4–5 barbell exercises with a clear purpose, done well, for general explosiveness and stability in the hamstrings, glutes and hip flexors. He goes lighter with more reps far from a race, heavier closer to it, and lighter but explosive in season. Sets, reps and the doses below are starting points; adjust them with your PT.</p>
     </section>
 
     <section class="cat" style="--dot:var(--c-thr)">
@@ -220,7 +281,7 @@ ol.ex span.d{display:block;color:var(--muted)}
         <ol class="ex">
           <li><b>Heel raise with ball between ankles</b><span class="dose">3 × 15, 3 s down</span><span class="d">Post tib focus. The best isolation for the posterior tibialis: squeezing the ball stops the ankles rolling outward, so the post tib has to do the work. Replaces the standard soleus and isometric calf holds.</span></li>
           <li><b>Eccentric step-downs</b><span class="dose">3 × 10 per leg</span><span class="d">Glute medius focus. Stand on a box, keep the other leg straight and lower yourself slowly. Functional for running and makes the glute medius stabilise the knee. Replaces the step-up variations from the PT list.</span></li>
-          <li><b>Banded split squat with anti-valgus</b><span class="dose">3 × 10 per leg</span><span class="d">Integration. Anchor a band so it pulls the front knee inward, then use your glute to keep the knee tracking straight over the foot through the split squat. Replaces the banded falling forward and backward drills.</span></li>
+          <li><b>Single-leg sweep</b><span class="dose">3 × 10 per leg</span><span class="d">Post tib and glute. Stand on one leg with a soft knee, keep the arch lifted and the knee over the foot, and slowly sweep the free leg backward, to the side and front.</span></li>
           <li><b>Standing banded hip abduction</b><span class="dose">3 × 15 per leg</span><span class="d">Glute activation. Pilates band around the ankles, feet turned in (pigeon-toed), lift the leg out to the side. Replaces the clamshell variations.</span></li>
         </ol>
         <h3>NN RUNNING TEAM CORE ROUTINE</h3>
@@ -241,7 +302,6 @@ ol.ex span.d{display:block;color:var(--muted)}
   <div id="tab-health" class="tabpane" role="tabpanel" style="display:none">
     <section class="panel">
       <h2>Injury: signal or noise</h2>
-      <p class="body"></p>
       <div class="scroll"><table class="phase two">
         <thead><tr><th>What you feel</th><th>What to do</th></tr></thead>
         <tbody>
@@ -277,6 +337,7 @@ ol.ex span.d{display:block;color:var(--muted)}
         <li>Train like a cyclist, following a cycling coach's programme</li>
         <li>Lots of cycling, all at low intensity</li>
       </ul>
+      <p class="hint" style="margin:10px 0 0">From Andreas Almgren's book.</p>
     </section>
   </div>
 </div>
@@ -316,8 +377,10 @@ ol.ex span.d{display:block;color:var(--muted)}
   const vAtVO2 = V => (-0.182258+Math.sqrt(0.182258**2+4*0.000104*(V+4.6)))/(2*0.000104);
 
   const KM_PER_MI = 1.609344;
-  const S = {vd:55.7, unit:'km', maxhr:188, lthr:166, dist:'21097.5', time:'1:23:22', fromRace:true, filter:'all'};
+  const S = {vd:55.7, unit:'km', maxhr:188, lthr:166, dist:'21097.5', time:'1:23:22', fromRace:true, filter:'all', rep:'time'};
   try{const s=JSON.parse(localStorage.getItem('wpl-state')||'null'); if(s) Object.assign(S,s);}catch(e){}
+  S.cw=Object.assign({on:false,temp:'',dew:'',hill:'',hillType:'loop',wind:'',windType:'oab',shelter:'1',surface:'1'},S.cw||{});
+  S.cr=Object.assign({on:false,temp:'',dew:'',route:'loop',climb:'',descent:'',wind:'',windType:'oab',shelter:'1',surface:'1'},S.cr||{});
   const save=()=>{try{localStorage.setItem('wpl-state',JSON.stringify(S));}catch(e){}};
 
   // page tabs
@@ -370,68 +433,187 @@ ol.ex span.d{display:block;color:var(--muted)}
   };
 
   // ---- Workout catalogue ----
-  // p: function -> [fast, slow] s/km ; rep: metres per rep for rep times ; extra: secondary pace
+  // p: function -> [fast, slow] s/km ; extra: secondary pace line
+  // k:'t' (rep given in seconds) or 'd' (rep given in metres), v: rep size (number or [lo,hi]); reps/pre/post build the name;
+  // or: a second option {reps,v}; keep: name never converted; len: sort key in seconds for sessions without k
   const CATS = [
     {id:'subt', name:'Sub-threshold', color:'--c-subt', when:'2 sessions a week all year. Controlled, finish feeling you could do 1-2 more reps. Start with your standard 5-min opener rep.', items:[
-      {n:'10 × 3 min', rest:'60 s jog', p:()=>[R(15000),R(HM)], hr:'subS', note:'Fastest sub-threshold option, closest to VO2max.'},
-      {n:'8 × 1000 m', rest:'60 s jog', rep:1000, p:()=>[R(15000),R(HM)], hr:'subS', note:'Same session on a track or measured loop.'},
-      {n:'5 × 6 min', rest:'60 s jog', p:()=>[R(HM),R(HM)+5], hr:'subS', note:'The classic middle session.'},
-      {n:'25 × 400 m', rest:'30 s standing', rep:400, p:()=>[R(10000),R(10000)+3], hr:'subS', note:'Almgren: 10 km at 10K pace, threshold intensity because of the short rest.'},
-      {n:'4 × 8 min or 3 × 10 min', rest:'90 s jog', p:()=>[R(25000),R(30000)], hr:'subL', note:'Longer reps at a lower pace.'},
-      {n:'2 × 15 min or 3 × 17 min', rest:'2–2.5 min jog', p:()=>[R(M)-3,R(M)+5], hr:'mp', note:'Marathon-pace sub-threshold, from your own build.'}
+      {n:'10 × 3 min', pl:'15K–HM pace', k:'t', v:180, reps:'10', rest:'60 s jog', p:()=>[R(15000),R(HM)], hr:'subS', note:'Fastest sub-threshold option, closest to VO2max.'},
+      {n:'8 × 1000 m', pl:'15K–HM pace', k:'d', v:1000, reps:'8', rest:'60 s jog', p:()=>[R(15000),R(HM)], hr:'subS', note:'Same session on a track or measured loop.'},
+      {n:'5 × 6 min', pl:'HM pace', k:'t', v:360, reps:'5', rest:'60 s jog', p:()=>[R(HM),R(HM)+5], hr:'subS', note:'The classic middle session.'},
+      {n:'25 × 400 m', pl:'10K pace', k:'d', v:400, reps:'25', rest:'30 s standing', p:()=>[R(10000),R(10000)+3], hr:'subS', note:'Almgren: 10 km at 10K pace, threshold intensity because of the short rest.'},
+      {n:'4 × 8 min or 3 × 10 min', pl:'25–30K pace', k:'t', v:480, reps:'4', or:{reps:'3', v:600}, rest:'90 s jog', p:()=>[R(25000),R(30000)], hr:'subL', note:'Longer reps at a lower pace.'},
+      {n:'2 × 15 min or 3 × 17 min', pl:'MP', k:'t', v:900, reps:'2', or:{reps:'3', v:1020}, rest:'2–2.5 min jog', p:()=>[R(M)-3,R(M)+5], hr:'mp', note:'Marathon-pace sub-threshold, from your own build.'}
     ]},
     {id:'thr', name:'Threshold', color:'--c-thr', when:'Right at threshold, harder than sub-threshold. Every 2-3 weeks at most, mainly in a 10K or half block.', items:[
-      {n:'3 × 2 km', rest:'2 min jog', rep:2000, p:()=>[T,T+3], hr:'thr', note:''},
-      {n:'4 × 2.5 km', rest:'2 min jog', rep:2500, p:()=>[T+2,T+5], hr:'thr', note:''},
-      {n:'20–25 min continuous', rest:'none', p:()=>[T+3,T+8], hr:'thr', note:'Good fitness check: compare pace at the same HR every few weeks.'},
-      {n:'2 × 20 min', rest:'3 min jog', p:()=>[T+5,T+10], hr:'thr', note:''},
-      {n:'45/15s, Bakken', rest:'15 s standing, walking or light jog', p:()=>[R(10000),R(15000)], extra:{l:'Progress to', p:()=>[R(3000),R(5000)]}, hr:'b45', note:'15–30 × 45 s on. From his book: start at 10–15K pace and progress toward 3–5K pace (e.g. a little faster each rep, or in groups of 5). Build volume over 8 weeks: 15, 20, 25, then 30 reps or 2 × 15 with 1–2 min between. Count it as your threshold session that week, not as an extra sub-threshold day.'}
+      {n:'3 × 2 km', pl:'threshold (T) pace', k:'d', v:2000, reps:'3', rest:'2 min jog', p:()=>[T,T+3], hr:'thr', note:''},
+      {n:'4 × 2.5 km', pl:'threshold (T) pace', k:'d', v:2500, reps:'4', rest:'2 min jog', p:()=>[T+2,T+5], hr:'thr', note:''},
+      {n:'20–25 min continuous', pl:'threshold (T) pace', k:'t', v:[1200,1500], post:' continuous', rest:'none', p:()=>[T+3,T+8], hr:'thr', note:'Good fitness check: compare pace at the same HR every few weeks.'},
+      {n:'2 × 20 min', pl:'threshold (T) pace', k:'t', v:1200, reps:'2', rest:'3 min jog', p:()=>[T+5,T+10], hr:'thr', note:''},
+      {n:'45/15s, Bakken', pl:'start at 10–15K pace', k:'t', v:45, keep:true, rest:'15 s standing, walking or light jog', p:()=>[R(10000),R(15000)], extra:{l:'Progress to', p:()=>[R(3000),R(5000)]}, hr:'b45', note:'15–30 × 45 s on. From his book: start at 10–15K pace and progress toward 3–5K pace (e.g. a little faster each rep, or in groups of 5). Build volume over 8 weeks: 15, 20, 25, then 30 reps or 2 × 15 with 1–2 min between. Count it as your threshold session that week, not as an extra sub-threshold day.'}
     ]},
     {id:'vo2', name:'VO2max', color:'--c-vo2', when:'Every 1-2 weeks in base, weekly in a 5K or 10K block. Recoveries long enough to hit the pace again; stop when form breaks.', items:[
-      {n:'5 × 3 min', rest:'2–3 min jog', p:()=>[R(3000),R(5000)], hr:'vo2', note:'The classic, at 3K-5K effort.'},
-      {n:'6 × 1000 m', rest:'2 min jog', rep:1000, p:()=>[R(5000)-3,R(5000)], hr:'vo2', note:''},
-      {n:'12–20 × 30 s on / 30 s off', rest:'30 s float', p:()=>[R(1500),R(3000)], extra:{l:'Float', p:()=>[E[0]-15,E[0]+15]}, hr:'vo2', note:'Lots of time near VO2max with little stress per rep.'},
-      {n:'8–10 × 60–90 s uphill', rest:'jog down', effort:'Hard, not sprinting', hr:'vo2', note:'Gentle on tendons; good for your posterior tibial history.'},
-      {n:'Hill reps: 2 × 12 × ~35 s (about 215 m)', rest:'jog down (~80 s); 5 min between sets', p:()=>[R(1500),R(1500)], hr:'none', note:'Almgren: 1500 m race effort for 35 s uphill. The pace shown is the flat equivalent, so expect it slower on the hill. Much harder than threshold (lactate 10–12 for him, about 3× LT2). Tired afterwards but not spent. Go by effort, not HR: on 35 s reps HR lags behind.'},
-      {n:'20 × 400 m', rest:'1 min standing', rep:400, p:()=>[R(5000),R(5000)+2], hr:'vo2', note:'Almgren: 8 km at 5K pace, his 5K-specific threshold version.'},
-      {n:'5 × 4 min on the bike', rest:'3 min easy', effort:'106–120% FTP', hr:'vo2', note:'VO2max stimulus without running impact.'}
+      {n:'5 × 3 min', pl:'3K–5K pace', k:'t', v:180, reps:'5', rest:'2–3 min jog', p:()=>[R(3000),R(5000)], hr:'vo2', note:'The classic, at 3K-5K effort.'},
+      {n:'6 × 1000 m', pl:'5K pace', k:'d', v:1000, reps:'6', rest:'2 min jog', p:()=>[R(5000)-3,R(5000)], hr:'vo2', note:''},
+      {n:'12–20 × 30 s on / 30 s off', pl:'1500 m–3K pace', k:'t', v:30, reps:'12–20', post:' on / 30 s off', rest:'30 s float', p:()=>[R(1500),R(3000)], extra:{l:'Float', p:()=>[E[0]-15,E[0]+15]}, hr:'vo2', note:'Lots of time near VO2max with little stress per rep.'},
+      {n:'8–10 × 60–90 s uphill', len:75, rest:'jog down', effort:'Hard, not sprinting', hr:'vo2', note:'Gentle on tendons; good for your posterior tibial history.'},
+      {n:'Hill reps: 2 × 12 × ~35 s (about 215 m)', pl:'1500 m effort', len:35, rest:'jog down (~80 s); 5 min between sets', p:()=>[R(1500),R(1500)], hr:'none', note:'Almgren: 1500 m race effort for 35 s uphill. The pace shown is the flat equivalent, so expect it slower on the hill. Much harder than threshold (lactate 10–12 for him, about 3× LT2). Tired afterwards but not spent. Go by effort, not HR: on 35 s reps HR lags behind.'},
+      {n:'20 × 400 m', pl:'5K pace', k:'d', v:400, reps:'20', rest:'1 min standing', p:()=>[R(5000),R(5000)+2], hr:'vo2', note:'Almgren: 8 km at 5K pace, his 5K-specific threshold version.'},
+      {n:'5 × 4 min on the bike', len:240, rest:'3 min easy', effort:'106–120% FTP', hr:'vo2', note:'VO2max stimulus without running impact.'}
     ]},
     {id:'k5', name:'5K-specific', color:'--c-race', race:5000, when:'Final 4-6 weeks before a 5K. One a week replaces a sub-threshold session.', items:[
-      {n:'20 × 400 m', rest:'1 min', rep:400, p:()=>[R(5000)-1,R(5000)+1], hr:'race', note:''},
-      {n:'5 × 1000 m', rest:'2 min jog', rep:1000, p:()=>[R(5000)-3,R(5000)], hr:'race', note:''},
-      {n:'3 × 1600 m', rest:'2–3 min jog', rep:1600, p:()=>[R(5000),R(5000)+2], hr:'race', note:''},
-      {n:'2 × (5 × 400 m)', rest:'45 s; 3 min between sets', rep:400, p:()=>[R(5000)-6,R(5000)-2], hr:'race', note:'Cut down through each set.'}
+      {n:'20 × 400 m', pl:'5K pace', k:'d', v:400, reps:'20', rest:'1 min', p:()=>[R(5000)-1,R(5000)+1], hr:'race', note:''},
+      {n:'5 × 1000 m', pl:'5K pace', k:'d', v:1000, reps:'5', rest:'2 min jog', p:()=>[R(5000)-3,R(5000)], hr:'race', note:''},
+      {n:'3 × 1600 m', pl:'5K pace', k:'d', v:1600, reps:'3', rest:'2–3 min jog', p:()=>[R(5000),R(5000)+2], hr:'race', note:''},
+      {n:'2 × (5 × 400 m)', pl:'faster than 5K pace', k:'d', v:400, pre:'2 × (5 × ', post:')', rest:'45 s; 3 min between sets', p:()=>[R(5000)-6,R(5000)-2], hr:'race', note:'Cut down through each set.'}
     ]},
     {id:'k10', name:'10K-specific', color:'--c-race', race:10000, when:'Final 4-6 weeks before a 10K.', items:[
-      {n:'8 × 1000 m', rest:'1 min', rep:1000, p:()=>[R(10000)-5,R(10000)-3], hr:'race', note:'Almgren: just faster than race pace (2:37 vs about 2:41 for him). Final key session 10-14 days out.'},
-      {n:'25 × 400 m', rest:'30 s', rep:400, p:()=>[R(10000),R(10000)+2], hr:'race', note:''},
-      {n:'5 × 2 km', rest:'90 s jog', rep:2000, p:()=>[R(10000)-2,R(10000)], hr:'race', note:''},
-      {n:'3 × 3 km', rest:'2 min jog', rep:3000, p:()=>[R(10000),R(10000)+2], hr:'race', note:''}
+      {n:'8 × 1000 m', pl:'just faster than 10K pace', k:'d', v:1000, reps:'8', rest:'1 min', p:()=>[R(10000)-5,R(10000)-3], hr:'race', note:'Almgren: just faster than race pace (2:37 vs about 2:41 for him). Final key session 10-14 days out.'},
+      {n:'25 × 400 m', pl:'10K pace', k:'d', v:400, reps:'25', rest:'30 s', p:()=>[R(10000),R(10000)+2], hr:'race', note:''},
+      {n:'5 × 2 km', pl:'10K pace', k:'d', v:2000, reps:'5', rest:'90 s jog', p:()=>[R(10000)-2,R(10000)], hr:'race', note:''},
+      {n:'3 × 3 km', pl:'10K pace', k:'d', v:3000, reps:'3', rest:'2 min jog', p:()=>[R(10000),R(10000)+2], hr:'race', note:''}
     ]},
     {id:'hm', name:'Half-marathon-specific', color:'--c-race', race:HM, when:'Final 4-6 weeks before a half.', items:[
-      {n:'4 × 4 km', rest:'90 s jog', rep:4000, p:()=>[R(HM)-3,R(HM)], hr:'race', note:''},
-      {n:'3 × 5 km', rest:'2 min jog', rep:5000, p:()=>[R(HM)-1,R(HM)+1], hr:'race', note:''},
-      {n:'2 × 6 km', rest:'2 min jog', rep:6000, p:()=>[R(HM),R(HM)+4], hr:'race', note:''},
-      {n:'8 × 2 km', rest:'60 s float', rep:2000, p:()=>[R(HM)-3,R(HM)-1], extra:{l:'Float', p:()=>[R(M)+15,R(M)+25]}, hr:'race', note:''},
-      {n:'15 km progression', rest:'none', p:()=>[R(HM)-2,R(M)], hr:'race', note:'Start at marathon pace, finish just under half pace.'}
+      {n:'4 × 4 km', pl:'HM pace', k:'d', v:4000, reps:'4', rest:'90 s jog', p:()=>[R(HM)-3,R(HM)], hr:'race', note:''},
+      {n:'3 × 5 km', pl:'HM pace', k:'d', v:5000, reps:'3', rest:'2 min jog', p:()=>[R(HM)-1,R(HM)+1], hr:'race', note:''},
+      {n:'2 × 6 km', pl:'HM pace', k:'d', v:6000, reps:'2', rest:'2 min jog', p:()=>[R(HM),R(HM)+4], hr:'race', note:''},
+      {n:'8 × 2 km', pl:'just faster than HM pace', k:'d', v:2000, reps:'8', rest:'60 s float', p:()=>[R(HM)-3,R(HM)-1], extra:{l:'Float', p:()=>[R(M)+15,R(M)+25]}, hr:'race', note:''},
+      {n:'15 km progression', pl:'MP → HM pace', k:'d', v:15000, post:' progression', rest:'none', p:()=>[R(HM)-2,R(M)], hr:'race', note:'Start at marathon pace, finish just under half pace.'}
     ]},
     {id:'mar', name:'Marathon-specific', color:'--c-race', race:M, when:'The long run is the key session. Every 7-10 days in the specific phase. Rehearse fuelling (a gel every 6 km) and race shoes.', items:[
-      {n:'28–30 km, last 12–16 km at marathon pace', rest:'none', p:()=>[R(M)-2,R(M)+3], extra:{l:'First part', p:()=>E}, hr:'mp', note:'The core session.'},
-      {n:'30 km with 3 × 5 km at marathon pace', rest:'1 km easy between', rep:5000, p:()=>[R(M)-2,R(M)+3], hr:'mp', note:'Breaks the pace into pieces early in the phase.'},
-      {n:'2 × 8 km at marathon pace', rest:'1 km float', rep:8000, p:()=>[R(M)-2,R(M)+3], extra:{l:'Float', p:()=>[R(M)+15,R(M)+25]}, hr:'mp', note:'Inside a 22-25 km run.'},
-      {n:'12–16 km alternating 1 km MP / 1 km float', rest:'continuous', p:()=>[R(M)-2,R(M)+3], extra:{l:'Float', p:()=>[R(M)+15,R(M)+25]}, hr:'mp', note:'Teaches clearing lactate at pace.'},
-      {n:'32 km progressive', rest:'none', p:()=>[R(M),E[1]], hr:'mp', note:'Easy down to marathon pace. Final long run, 3-4 weeks out.'},
-      {n:'3 × 17 min', rest:'2.5 min jog', p:()=>[R(M)-2,R(M)+5], hr:'mp', note:'Mid-week marathon session.'}
+      {n:'28–30 km, last 12–16 km at marathon pace', pl:'MP', len:3000, rest:'none', p:()=>[R(M)-2,R(M)+3], extra:{l:'First part', p:()=>E}, hr:'mp', note:'The core session.'},
+      {n:'30 km with 3 × 5 km at marathon pace', pl:'MP', k:'d', v:5000, pre:'30 km with 3 × ', post:' at marathon pace', rest:'1 km easy between', p:()=>[R(M)-2,R(M)+3], hr:'mp', note:'Breaks the pace into pieces early in the phase.'},
+      {n:'2 × 8 km at marathon pace', pl:'MP', k:'d', v:8000, reps:'2', post:' at marathon pace', rest:'1 km float', p:()=>[R(M)-2,R(M)+3], extra:{l:'Float', p:()=>[R(M)+15,R(M)+25]}, hr:'mp', note:'Inside a 22-25 km run.'},
+      {n:'12–16 km alternating 1 km MP / 1 km float', pl:'MP', len:240, rest:'continuous', p:()=>[R(M)-2,R(M)+3], extra:{l:'Float', p:()=>[R(M)+15,R(M)+25]}, hr:'mp', note:'Teaches clearing lactate at pace.'},
+      {n:'32 km progressive', pl:'easy → MP', len:7000, rest:'none', p:()=>[R(M),E[1]], hr:'mp', note:'Easy down to marathon pace. Final long run, 3-4 weeks out.'},
+      {n:'3 × 17 min', pl:'MP', k:'t', v:1020, reps:'3', rest:'2.5 min jog', p:()=>[R(M)-2,R(M)+5], hr:'mp', note:'Mid-week marathon session.'}
     ]},
     {id:'sup', name:'Support work', color:'--c-sup', when:'Short additions that build the durability your quads lacked in The Hague.', items:[
-      {n:'Strides 6–8 × 20 s', rest:'walk back', p:()=>[R(1500)-5,R(1500)+5], hr:'none', note:'Relaxed and fast, 1-2 × a week after easy runs.'},
-      {n:'Hill sprints 6–8 × 10 s', rest:'walk down', effort:'Full effort', hr:'none', note:'Power and tendon stiffness at low risk, 1 × a week.'},
-      {n:'Hills at the end of the long run', rest:'jog down', effort:'4–6 × 30 s uphill, hard', hr:'none', note:'Fatigue resistance, every long run.'},
-      {n:'Controlled downhill 4–6 × 200 m', rest:'walk up', p:()=>E, hr:'easy', note:'Braking (eccentric) strength for the quads, 1 × a week in base.'},
+      {n:'Strides 6–8 × 20 s', pl:'1500 m pace', k:'t', v:20, pre:'Strides 6–8 × ', rest:'walk back', p:()=>[R(1500)-5,R(1500)+5], hr:'none', note:'Relaxed and fast, 1-2 × a week after easy runs.'},
+      {n:'Hill sprints 6–8 × 10 s', len:10, rest:'walk down', effort:'Full effort', hr:'none', note:'Power and tendon stiffness at low risk, 1 × a week.'},
+      {n:'Hills at the end of the long run', len:30, rest:'jog down', effort:'4–6 × 30 s uphill, hard', hr:'none', note:'Fatigue resistance, every long run.'},
+      {n:'Controlled downhill 4–6 × 200 m', pl:'easy pace', k:'d', v:200, pre:'Controlled downhill 4–6 × ', rest:'walk up', p:()=>E, hr:'easy', note:'Braking (eccentric) strength for the quads, 1 × a week in base.'},
       {n:'Strength 20–25 min', rest:'', effort:'Step-downs, split squats, lunges, single-leg calf raises, hip abduction', hr:'none', note:'2 × a week: quads, posterior tibial tendon and hips.'},
-      {n:'Easy run', rest:'', p:()=>E, hr:'easy', note:'Slower is fine; this is where the volume comes from.'}
+      {n:'Easy run', pl:'easy pace', rest:'', p:()=>E, hr:'easy', note:'Slower is fine; this is where the volume comes from.'}
     ]}
   ];
+
+  // ---- Rep length: time or distance ----
+  const arr = v => Array.isArray(v) ? v : [v];
+  const joinR = (a, b) => { if(a===b) return a; const ua=a.split(' ').pop(), ub=b.split(' ').pop(); return ua===ub ? a.slice(0,-(ua.length+1))+'–'+b : a+'–'+b; };
+  const natDur = s => s<120 && s%60 ? `${s} s` : `${+(s/60).toFixed(1)} min`;
+  const natDist = m => m<2000 ? `${m} m` : `${+(m/1000).toFixed(1)} km`;
+  const rndDur = s => { if(s>=600) return `${Math.round(s/60)} min`; const r = s<100 ? Math.round(s/5)*5 : Math.round(s/15)*15; return r<100 ? `${r} s` : `${Math.floor(r/60)}:${String(r%60).padStart(2,'0')} min`; };
+  const rndDist = m => m<1000 ? `${Math.round(m/50)*50} m` : m<10000 ? `${+(Math.round(m/100)/10).toFixed(1)} km` : `${+(Math.round(m/500)/2).toFixed(1)} km`;
+  const exDistR = (lo, hi) => hi<2000 ? joinR(`${Math.round(lo/10)*10} m`, `${Math.round(hi/10)*10} m`) : joinR(`${(lo/1000).toFixed(2)} km`, `${(hi/1000).toFixed(2)} km`);
+  const fmtSet = (vals, f) => joinR(f(vals[0]), f(vals[vals.length-1]));
+  function repName(w, r){
+    if(!w.k || w.keep) return w.n;
+    const p = r ? (r[0]+r[1])/2 : null;
+    const native = (S.rep==='time') === (w.k==='t');
+    const one = o => {
+      const vs = arr(o.v); let s;
+      if(native || !p) s = fmtSet(vs, w.k==='t' ? natDur : natDist);
+      else s = '≈' + (w.k==='t' ? fmtSet(vs.map(x=>x/p*1000), rndDist) : fmtSet(vs.map(x=>x*p/1000), rndDur));
+      return (o.pre ?? (o.reps ? o.reps+' × ' : '')) + s + (o.post || '');
+    };
+    return one(w) + (w.or ? ' or ' + one({reps:w.or.reps, v:w.or.v, post:w.post}) : '');
+  }
+  function perRep(w, r){
+    if(!w.k || !r) return '';
+    const fast=Math.min(r[0],r[1]), slow=Math.max(r[0],r[1]);
+    const one = v => { const vs=arr(v), lo=vs[0], hi=vs[vs.length-1];
+      if(S.rep==='time') return w.k==='d' ? fmtSet(vs, natDist) : exDistR(lo/slow*1000, hi/fast*1000);
+      return w.k==='t' ? fmtSet(vs, natDur) : `${mmss(lo*fast/1000)}–${mmss(hi*slow/1000)}`; };
+    return one(w.v) + (w.or ? ' / ' + one(w.or.v) : '');
+  }
+  function repSec(w, r){
+    if(!w.k) return w.len ?? Infinity;
+    const vs=arr(w.v), v=(vs[0]+vs[vs.length-1])/2;
+    return w.k==='t' ? v : (r ? v*(r[0]+r[1])/2000 : v*0.24);
+  }
+
+  // ---- Conditions: heat, hills, wind (James Copeland, The Norwegian Singles Method, tables 1.5-2.2) ----
+  // Table values are seconds added per km at 3:00, 3:30 ... 6:00/km; paces in between are interpolated.
+  const PH=[180,240,300,360], PW=[180,210,240,270,300,330,360];
+  const HILL={
+    loop:{x:[5,10,15,20], r:[[2,4,6,8],[4,7,10,13],[3,6,8,10],[5,9,12,16]]},
+    up:{x:[5,10,15,20,25,30], r:[[4,9,14,20,25,31],[6,12,18,27,34,41],[7,15,23,34,42,51],[9,18,27,44,50,66]]},
+    down:{x:[5,10,15,20,25,30], r:[[-3,-6,-9,-11,-15,-18],[-4,-8,-12,-16,-20,-24],[-5,-10,-15,-20,-25,-30],[-6,-12,-18,-24,-40,-42]]}
+  };
+  const WIND={
+    oab:[[1,3,7,10,14],[1,4,8,12,16],[3,6,10,15,19],[2,6,11,16,20],[4,9,14,19,24],[5,10,16,21,28],[5,12,17,23,30]],
+    cross:[[1,3,4,6,8],[2,4,6,8,10],[2,4,6,8,11],[1,3,6,8,11],[3,5,8,11,13],[3,6,9,12,15],[3,6,9,13,16]],
+    head:[[9,15,22,29,38],[10,17,25,34,44],[12,20,29,40,53],[12,21,32,45,59],[15,25,38,52,69],[16,28,42,59,79],[17,31,47,66,89]],
+    tail:[[-6,-8,-8,-9,-10],[-7,-8,-9,-10,-12],[-6,-7,-8,-10,-14],[-8,-8,-10,-13,-18],[-6,-7,-9,-14,-20],[-6,-7,-10,-16,-23],[-6,-7,-12,-19,-28]]
+  };
+  const interp=(xs,ys,x)=>{ if(x<=xs[0]) return ys[0]; for(let i=1;i<xs.length;i++) if(x<=xs[i]) return ys[i-1]+(ys[i]-ys[i-1])*(x-xs[i-1])/(xs[i]-xs[i-1]); return ys[ys.length-1]; };
+  const grid=(rows,cols,tbl,pace,val)=>interp(rows, tbl.map(r=>interp(cols,r,val)), pace);
+  const num=v=>(v===''||v==null||!isFinite(+v))?null:+v;
+  // Table 2.2: take the higher of the temperature and dew point bands
+  const heatPct=(t,d)=>Math.max(t==null?0:t>=25?4:t>=20?2:t>=15?1:0, d==null?0:d>=18?4:d>=15?2:d>=12?1:0);
+  function condFx(c, race){
+    const t=num(c.temp), d=num(c.dew), w=Math.max(0,num(c.wind)||0), sh=+c.shelter||1, sf=+c.surface||1;
+    const km=parseFloat(S.dist)/1000;
+    // hills as one or two parts: [table, metres per km]. A point-to-point race splits into the climb that is
+    // matched by descent (loop table) plus the net gain or loss (uphill or downhill table).
+    let segs;
+    if(!race) segs=[[HILL[c.hillType]?c.hillType:'loop', Math.max(0,num(c.hill)||0)]];
+    else {
+      const g=Math.max(0,num(c.climb)||0)/km, l=(c.route==='p2p' ? Math.max(0,num(c.descent)||0) : Math.max(0,num(c.climb)||0))/km;
+      segs=[['loop',Math.min(g,l)], [g>=l?'up':'down', Math.abs(g-l)]];
+    }
+    segs=segs.filter(s=>s[1]>0);
+    const hm=segs.reduce((a,s)=>a+s[1],0);
+    const hillAt = x => segs.reduce((a,[k,m])=>{ const H=HILL[k]; return a+grid(PH,[0,...H.x],H.r.map(r=>[0,...r]),x,m); },0);
+    const heat=heatPct(t,d)/100, Wt=WIND[c.windType]||WIND.oab;
+    const parts = x => ({
+      heat: x/(1-heat)-x,
+      hill: hillAt(x),
+      wind: w>5 ? sh*grid(PW,[5,10,15,20,25,30],Wt.map(r=>[0,...r]),x,w) : 0
+    });
+    const f = x => { const p=parts(x); return (x+p.heat+p.hill+p.wind)*sf; };
+    const warn=[];
+    if((t!=null&&t>28)||(d!=null&&d>20)) warn.push('hotter than the heat table goes: run by HR or effort, or move the session');
+    if(segs.some(([k,m])=>m>(k==='loop'?20:30))) warn.push('very hilly: beyond this, pace is not a reliable guide');
+    if(w>30) warn.push('wind above 30 km/h: pace is not a reliable guide');
+    return {f, parts, heat, hm, w, sf, warn, active: heat>0||hm>0||w>5||sf!==1};
+  }
+  const ID = x => x;
+  const workAdj = () => (S.cw.on ? condFx(S.cw,false) : null);
+  // Race time -> equivalent time in ideal conditions (solve f(p0) = actual pace)
+  function idealSec(sec, d){
+    const c=condFx(S.cr,true); if(!S.cr.on || !c.active) return sec;
+    const pa=sec/(d/1000); let lo=pa*0.6, hi=pa*1.4;
+    for(let i=0;i<60;i++){ const m=(lo+hi)/2; if(c.f(m)>pa) hi=m; else lo=m; }
+    return (lo+hi)/2*(d/1000);
+  }
+  const sgn = v => (v>=0?'+':'−')+Math.abs(Math.round(v));
+  function condSummaries(){
+    $('crDesc').hidden = S.cr.route!=='p2p';
+    // workout
+    const cw=condFx(S.cw,false), x=T, y=cw.f(x), p=cw.parts(x);
+    const bits=[]; if(cw.heat>0) bits.push(`heat +${Math.round(cw.heat*100)}%`); if(cw.hm>0) bits.push(`hills ${sgn(p.hill)} s`); if(cw.w>5) bits.push(`wind ${sgn(p.wind)} s`); if(cw.sf!==1) bits.push('surface +2.5%');
+    $('cwSum').innerHTML = !cw.active ? 'No adjustment: ideal conditions.' :
+      `At threshold pace: <b>${mmss(u(x))} → ${mmss(u(y))}${uLbl()}</b> (${sgn(y-x)} s/km). ${bits.join(', ').replace(/^./,c=>c.toUpperCase())}.`
+      + (S.cw.on ? '' : ' <span class="hint">Tick “Apply” to use it on the workout paces.</span>')
+      + (cw.warn.length ? `<br><span class="warn">${cw.warn.join('; ')}.</span>` : '');
+    // race
+    const cr=condFx(S.cr,true), d=parseFloat(S.dist), sec=parseTime(S.time);
+    let rs='No adjustment: ideal conditions.';
+    if(cr.active && sec){
+      const ideal=(()=>{ const pa=sec/(d/1000); let lo=pa*0.6,hi=pa*1.4; for(let i=0;i<60;i++){const m=(lo+hi)/2; if(cr.f(m)>pa) hi=m; else lo=m;} return (lo+hi)/2*(d/1000); })();
+      const v0=vdotOf(d,sec/60), v1=vdotOf(d,ideal/60);
+      rs=`Your ${mmss(sec)} is worth about <b>${mmss(ideal)}</b> in ideal conditions: VDOT <b>${v1.toFixed(1)}</b> instead of ${v0.toFixed(1)}.`
+        + (S.cr.on ? (S.fromRace ? '' : ' <span class="hint">The VDOT is set by hand now; re-enter the race result to use it.</span>') : ' <span class="hint">Tick “Adjust” to use it for your VDOT.</span>')
+        + (cr.warn.length ? `<br><span class="warn">${cr.warn.join('; ')}.</span>` : '');
+    }
+    $('crSum').innerHTML=rs;
+    const tags=[]; if(S.cw.on&&cw.active) tags.push(`workouts ${sgn(y-x)} s/km`); if(S.cr.on&&cr.active&&S.fromRace) tags.push('VDOT adjusted for race conditions');
+    $('condSum').textContent = tags.length ? tags.join(' · ') : 'Adjust paces and your VDOT for heat, hills and wind';
+    $('condNote').hidden = !(S.cw.on&&cw.active);
+    $('condNote').textContent = 'Race predictions and paces in this table are for ideal conditions. The workout paces below include today’s conditions.';
+  }
 
   // ---- UI wiring ----
   const $ = id => document.getElementById(id);
@@ -441,7 +623,8 @@ ol.ex span.d{display:block;color:var(--muted)}
     const sec=parseTime($('time').value), d=parseFloat($('dist').value);
     const hint=$('timeHint');
     if(!sec){hint.textContent='Enter a time like 1:23:22 or 18:10'; hint.className='err'; return;}
-    const vd=vdotOf(d,sec/60);
+    S.dist=$('dist').value;
+    const vd=vdotOf(d,idealSec(sec,d)/60);
     if(!(vd>25&&vd<90)){hint.textContent='That time is outside the model range; check distance and time.'; hint.className='err'; return;}
     hint.textContent='Format h:mm:ss or mm:ss'; hint.className='hint';
     S.vd=Math.round(vd*10)/10; S.fromRace=true; S.dist=$('dist').value; S.time=$('time').value;
@@ -453,8 +636,10 @@ ol.ex span.d{display:block;color:var(--muted)}
     $('vdotOut').textContent=S.vd.toFixed(1);
     $('vdotRange').value=S.vd;
     const opt=$('dist').selectedOptions[0];
-    $('vdotSrc').textContent = S.fromRace ? `from your ${opt.textContent.toLowerCase()} of ${S.time}` : 'set by hand';
+    const rAdj = S.fromRace && S.cr.on && condFx(S.cr,true).active;
+    $('vdotSrc').textContent = S.fromRace ? `from your ${opt.textContent.toLowerCase()} of ${S.time}${rAdj?', adjusted for race conditions':''}` : 'set by hand';
     $('uKm').setAttribute('aria-pressed',S.unit==='km'); $('uMi').setAttribute('aria-pressed',S.unit==='mi');
+    $('rTime').setAttribute('aria-pressed',S.rep==='time'); $('rDist').setAttribute('aria-pressed',S.rep==='dist');
 
     // reference table
     const races=[['1500 m',1500],['Mile',1609.344],['3K',3000],['5K',5000],['10K',10000],['15K',15000],['Half marathon',HM],['Marathon',M]];
@@ -470,19 +655,21 @@ ol.ex span.d{display:block;color:var(--muted)}
     $('chips').querySelectorAll('button').forEach(b=>b.onclick=()=>{S.filter=b.dataset.f;save();render();});
 
     // categories
+    const WA=workAdj(), ADJ = WA&&WA.active ? WA.f : ID;
     $('cats').innerHTML=CATS.filter(c=>S.filter==='all'||S.filter===c.id).map(c=>{
       const racep = c.race ? ` <span class="tag">race pace ${mmss(u(R(c.race)))}${uLbl()}</span>` : '';
-      const rows=c.items.map(w=>{
-        let pace='', rep='';
-        if(w.p){ const r=w.p(); pace=`${rng(r[0],r[1])}<small>${uLbl()}</small>`; if(w.rep) rep=repTime(r,w.rep);
-          if(w.extra){ const x=w.extra.p(); pace+= x ? `<small>${w.extra.l} ${rng(x[0],x[1])}</small>` : `<small>${w.extra.l} ${Math.round(45000/Math.max(r[0],r[1]))}–${Math.round(45000/Math.min(r[0],r[1]))} m</small>`; } }
+      const rows=c.items.map((w,i)=>({w,i,r:w.p?w.p().map(ADJ):null})).map(o=>(o.s=repSec(o.w,o.r),o)).sort((a,b)=>a.s-b.s||a.i-b.i).map(({w,r})=>{
+        let pace='', rep=perRep(w,r);
+        if(w.p){ pace=`${rng(r[0],r[1])}<small>${uLbl()}</small>`+(w.pl?`<small class="pl">${w.pl}</small>`:'');
+          if(w.extra){ const x0=w.extra.p(), x=x0&&x0.map(ADJ); pace+= x ? `<small>${w.extra.l} ${rng(x[0],x[1])}</small>` : `<small>${w.extra.l} ${Math.round(45000/Math.max(r[0],r[1]))}–${Math.round(45000/Math.min(r[0],r[1]))} m</small>`; } }
         const b=`i.${c.id}.${w.n}.`;
         if(!w.p) pace=`<span style="font-family:var(--body);font-weight:600" ${ek(b+'effort')}>${tx(b+'effort',w.effort)}</span>`;
-        return `<tr><td class="wname" ${ek(b+'n')}>${tx(b+'n',w.n)}</td><td ${ek(b+'rest')}>${tx(b+'rest',w.rest)}</td><td class="p">${pace}</td><td class="p">${rep}</td><td>${hr[w.hr]()}</td><td class="note" ${ek(b+'note')}>${tx(b+'note',w.note)}</td></tr>`;
+        return `<tr><td class="wname" ${ek(b+'n')}>${tx(b+'n',repName(w,r))}</td><td ${ek(b+'rest')}>${tx(b+'rest',w.rest)}</td><td class="p">${pace}</td><td class="p">${rep}</td><td>${hr[w.hr]()}</td><td class="note" ${ek(b+'note')}>${tx(b+'note',w.note)}</td></tr>`;
       }).join('');
       return `<section class="cat" style="--dot:var(${c.color})"><div class="cathead"><h2 ${ek(`c.${c.id}.name`)}>${tx(`c.${c.id}.name`,c.name)}</h2>${racep}<p ${ek(`c.${c.id}.when`)}>${tx(`c.${c.id}.when`,c.when)}</p></div>
-        <div class="panel scroll" style="padding:4px 8px"><table><thead><tr><th>Session</th><th>Recovery</th><th>Pace</th><th>Rep time</th><th>HR</th><th>Notes</th></tr></thead><tbody>${rows}</tbody></table></div></section>`;
+        <div class="panel scroll" style="padding:4px 8px"><table><thead><tr><th>Session</th><th>Recovery</th><th>Pace</th><th>${S.rep==='time'?'Rep distance':'Rep time'}</th><th>HR</th><th>Notes</th></tr></thead><tbody>${rows}</tbody></table></div></section>`;
     }).join('');
+    condSummaries();
     if(EDITING) setEditable(true);
     save();
   }
@@ -490,7 +677,7 @@ ol.ex span.d{display:block;color:var(--muted)}
   // ---- In-place text editing, saved as a new version of the page ----
   let EDITING=false, ART=null, ORIG=[];
   const STATIC_SEL='h1, .lede, .wrap h2, .panel h3, .ref > p.hint, .phase th, .phase td, ul.plan li, ol.ex b, ol.ex .dose, ol.ex span.d, .cathead p, #tab-strength p.hint, #tab-health p, footer';
-  const isStatic = el => !el.closest('#cats, #refTable, #chips, .controls, .editbar');
+  const isStatic = el => !el.closest('#cats, #refTable, #chips, .controls, .editbar, .cond');
   const staticEls = root => [...root.querySelectorAll(STATIC_SEL)].filter(isStatic);
   function clean(html){
     const t=document.createElement('template'); t.innerHTML=html;
@@ -534,7 +721,7 @@ ol.ex span.d{display:block;color:var(--muted)}
       if(!p.wrap) return p.html;
       const w=p.wrap.cloneNode(true), cl=staticEls(w);
       if(cl.length===live.length) live.forEach((el,i)=>{ if(el.innerHTML!==ORIG[i]) cl[i].innerHTML=clean(el.innerHTML); });
-      w.querySelectorAll('ul.plan li, ol.ex li').forEach(li=>{ if(!li.textContent.trim()) li.remove(); });
+      w.querySelectorAll('ul.plan li, ol.ex li, p.body').forEach(li=>{ if(!li.textContent.trim()) li.remove(); });
       return w.outerHTML;
     });
     const ed={}; for(const k in DRAFT) if(DRAFT[k]!==DEF[k]) ed[k]=DRAFT[k];
@@ -576,7 +763,24 @@ ol.ex span.d{display:block;color:var(--muted)}
   $('lthr').addEventListener('change',syncOv);
   $('uKm').onclick=()=>{S.unit='km';render();};
   $('uMi').onclick=()=>{S.unit='mi';render();};
-  if(S.fromRace){ const sec=parseTime(S.time); if(sec) S.vd=Math.round(vdotOf(parseFloat(S.dist),sec/60)*10)/10; }
+  $('rTime').onclick=()=>{S.rep='time';render();};
+  $('rDist').onclick=()=>{S.rep='dist';render();};
+  const raceVd = () => { const sec=parseTime(S.time); if(sec) S.vd=Math.round(vdotOf(parseFloat(S.dist),idealSec(sec,parseFloat(S.dist))/60)*10)/10; };
+  // conditions inputs
+  for(const set of ['cw','cr']){
+    $(set).querySelectorAll('[data-k]').forEach(el=>{
+      const k=el.dataset.k;
+      if(el.type==='checkbox') el.checked=!!S[set][k]; else el.value=S[set][k];
+      el.addEventListener(el.tagName==='SELECT'||el.type==='checkbox'?'change':'input',()=>{
+        S[set][k] = el.type==='checkbox' ? el.checked : el.value;
+        if(set==='cr' && S.fromRace) raceVd();
+        render();
+      });
+    });
+  }
+  $('condPanel').open=!!S.condOpen;
+  $('condPanel').addEventListener('toggle',()=>{S.condOpen=$('condPanel').open;save();});
+  if(S.fromRace) raceVd();
   render();
   syncOv();
 })();
