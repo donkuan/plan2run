@@ -1,6 +1,6 @@
 {
-  "name": "Workout Pace Library",
-  "short_name": "Paces",
+  "name": "Plan2Run",
+  "short_name": "Plan2Run",
   "description": "Workout paces from a race result or VDOT, offline.",
   "start_url": "./",
   "scope": "./",
