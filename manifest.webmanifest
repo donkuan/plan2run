@@ -1,7 +1,7 @@
 {
   "name": "Plan2Run",
   "short_name": "Plan2Run",
-  "description": "Workout paces from a race result or VDOT, offline.",
+  "description": "Workout paces, strength and health notes, offline.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
