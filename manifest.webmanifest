@@ -1,6 +1,6 @@
 {
-  "name": "Plan2Run",
-  "short_name": "Plan2Run",
+  "name": "Run2Plan",
+  "short_name": "Run2Plan",
   "description": "Workout paces, strength and health notes, offline.",
   "start_url": "./",
   "scope": "./",
