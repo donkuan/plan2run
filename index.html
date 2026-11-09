@@ -45,7 +45,7 @@ h2{font-size:26px;text-transform:uppercase}
 .controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;align-items:stretch}
 .ctl{display:grid;gap:8px;align-content:start;min-width:0}
 .label{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
-select,input[type=text],input[type=number]{font:inherit;color:var(--fg);background:var(--soft);border:1px solid var(--line);border-radius:6px;padding:8px 10px;width:100%;min-width:0}
+select,input[type=text],input[type=number],input[type=date]{font:inherit;color:var(--fg);background:var(--soft);border:1px solid var(--line);border-radius:6px;padding:8px 10px;width:100%;min-width:0}
 input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .vdot{display:flex;align-items:baseline;gap:10px}
@@ -79,6 +79,37 @@ fieldset.cset legend{font-weight:700;padding:0 6px}
 .csum{margin:10px 0 0;font-size:14px}
 .csum b{color:var(--accent)}
 .csum .warn{color:var(--c-vo2)}
+.pgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:10px}
+.pgrid label{display:grid;gap:4px;min-width:0}
+input[type=date]{-webkit-appearance:none;appearance:none;display:block;max-width:100%;min-height:40px;line-height:1.3}
+input[type=date]::-webkit-date-and-time-value{text-align:left}
+.restpick{margin-top:12px}
+.restpick .days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;margin-top:6px;max-width:420px}
+.restpick button{font:inherit;font-size:13px;min-width:0;padding:7px 0;border:1px solid var(--line);border-radius:6px;background:var(--soft);color:var(--fg);cursor:pointer}
+.restpick button[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg);font-weight:600}
+.restpick button.lock{opacity:.45;cursor:not-allowed}
+.pwarn{color:var(--c-vo2);font-size:13.5px;margin:0 0 10px}
+.pact{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:14px}
+.chip:disabled{opacity:.5;cursor:default}
+.pinfo{margin-top:12px}.pinfo summary{cursor:pointer;font-weight:600}.pinfo p{margin:8px 0 0;max-width:75ch}
+.vbars{display:flex;align-items:flex-end;gap:3px;height:110px;padding-top:14px}
+.vb{flex:1;height:var(--h);min-height:4px;background:var(--dot);border-radius:3px 3px 0 0;position:relative;opacity:.85}
+.vb span{position:absolute;top:-15px;left:50%;transform:translateX(-50%);font-size:10px;color:var(--muted);font-family:var(--mono)}
+.vleg{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:8px;font-size:12.5px;color:var(--muted)}
+.vleg i{display:inline-block;width:9px;height:9px;border-radius:2px;background:var(--dot);margin-right:5px}
+.week{border-left:5px solid var(--dot);padding:12px 14px}
+.wkhead{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;margin-bottom:6px}
+.wkhead b{font-family:var(--display);font-size:20px;text-transform:uppercase}
+.wkhead span{color:var(--muted);font-size:13.5px}
+.wkhead .wkkm{margin-left:auto;font-family:var(--mono);font-weight:600;color:var(--fg)}
+.pday{display:grid;grid-template-columns:92px minmax(0,1fr);gap:8px;padding:7px 0;border-top:1px solid var(--line)}
+.pday .pd{color:var(--muted);font-size:13.5px;white-space:nowrap}
+.pday.rest{color:var(--muted)}
+.pday.race b{color:var(--c-vo2)}
+.wtxt summary{cursor:pointer;font-size:13px;color:var(--accent)}
+.wtxt pre{font-family:var(--mono);font-size:12px;background:var(--soft);border-radius:6px;padding:8px 10px;margin:6px 0 0;white-space:pre-wrap;user-select:all}
+td.cpc{color:var(--c-vo2)}
+td.cpc small{color:var(--c-vo2)!important;opacity:.85}
 td.p small.pl{font-family:var(--body);font-weight:600;color:var(--dot,var(--muted));font-size:12.5px;white-space:normal}
 tr:last-child td{border-bottom:0}
 .ref table td:first-child{font-weight:600}
@@ -113,7 +144,7 @@ ol.ex .dose{font-family:var(--mono);font-size:13px;font-weight:600;margin-left:8
 ol.ex span.d{display:block;color:var(--muted)}
 [hidden]{display:none !important}
 .editbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;margin-top:-10px}
-.editbar .chip.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
+.chip.primary,.editbar .chip.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
 .editing [contenteditable="true"]{outline:1px dashed var(--accent);outline-offset:2px;border-radius:3px;cursor:text}
 .editing [contenteditable="true"]:focus{outline:2px solid var(--accent);background:var(--soft)}
 @media (max-width:520px){.vdot b{font-size:52px}.tabs button{font-size:19px;padding:6px 10px 8px}}
@@ -128,6 +159,7 @@ ol.ex span.d{display:block;color:var(--muted)}
 
   <div class="tabs" role="tablist" aria-label="Pages">
     <button id="btn-paces" role="tab" aria-selected="true" aria-controls="tab-paces">Running</button>
+    <button id="btn-plan" role="tab" aria-selected="false" aria-controls="tab-plan">Plan</button>
     <button id="btn-strength" role="tab" aria-selected="false" aria-controls="tab-strength">Strength</button>
     <button id="btn-health" role="tab" aria-selected="false" aria-controls="tab-health">Health</button>
   </div>
@@ -197,9 +229,24 @@ ol.ex span.d{display:block;color:var(--muted)}
         </div>
         <p class="csum" id="cwSum"></p>
       </fieldset>
+      <fieldset class="cset" id="cp">
+        <legend>Upcoming race conditions</legend>
+        <label class="tog"><input type="checkbox" data-k="on"> Adjust the race predictions</label>
+        <div class="cf">
+          <label class="hint">Temperature °C<input type="number" data-k="temp" step="1" placeholder="e.g. 18"></label>
+          <label class="hint">Dew point °C<input type="number" data-k="dew" step="1" placeholder="e.g. 12"></label>
+          <label class="hint">Climb per km (m)<input type="number" data-k="hill" min="0" step="1" placeholder="0"></label>
+          <label class="hint">Route<select data-k="hillType"><option value="loop">Loop</option><option value="up">Uphill only</option><option value="down">Downhill only</option></select></label>
+          <label class="hint">Wind km/h<input type="number" data-k="wind" min="0" step="1" placeholder="0"></label>
+          <label class="hint">Wind direction<select data-k="windType"><option value="oab">Out-and-back</option><option value="cross">Crosswind</option><option value="head">Headwind</option><option value="tail">Tailwind</option></select></label>
+          <label class="hint">Shelter<select data-k="shelter"><option value="1">Exposed</option><option value="0.8">Light cover</option><option value="0.6">Urban or forest</option></select></label>
+          <label class="hint">Surface<select data-k="surface"><option value="1">Road or track</option><option value="1.025">Gravel or dirt</option></select></label>
+        </div>
+        <p class="csum" id="cpSum"></p>
+      </fieldset>
       <fieldset class="cset" id="cr">
-        <legend>Race result conditions</legend>
-        <label class="tog"><input type="checkbox" data-k="on"> Adjust the VDOT from my race result</label>
+        <legend>Past race result conditions</legend>
+        <label class="tog"><input type="checkbox" data-k="on"> Correct my VDOT for how that race went</label>
         <div class="cf">
           <label class="hint">Temperature °C<input type="number" data-k="temp" step="1" placeholder="e.g. 18"></label>
           <label class="hint">Dew point °C<input type="number" data-k="dew" step="1" placeholder="e.g. 12"></label>
@@ -214,7 +261,7 @@ ol.ex span.d{display:block;color:var(--muted)}
         <p class="csum" id="crSum"></p>
       </fieldset>
     </div>
-    <div class="hint" style="margin-top:10px">From James Copeland's Norwegian Singles Method: heat by temperature and dew point (whichever is worse), hills as climb and descent per km, wind for an out-and-back or loop (head- and tailwind) unless you pick one direction. Exposed means seafront or track; light cover is trees or a park (wind effect −20%); urban or forest −40%. Route “Loop” covers loops and out-and-backs. For a point-to-point race, the climb matched by descent counts as rolling terrain and the rest as a net uphill or downhill. Gravel or dirt adds 2.5%.</div>
+    <div class="hint" style="margin-top:10px">Three uses: today's conditions slow the workout paces; upcoming race conditions slow the race predictions; a past race's conditions correct the VDOT you get from it (a hot or hilly race was worth more than its time). From James Copeland's Norwegian Singles Method: heat by temperature and dew point (whichever is worse), hills as climb and descent per km, wind for an out-and-back or loop (head- and tailwind) unless you pick one direction. Exposed means seafront or track; light cover is trees or a park (wind effect −20%); urban or forest −40%. Route “Loop” covers loops and out-and-backs. For a point-to-point race, the climb matched by descent counts as rolling terrain and the rest as a net uphill or downhill. Gravel or dirt adds 2.5%.</div>
   </details>
 
   <section class="panel ref">
@@ -243,6 +290,32 @@ ol.ex span.d{display:block;color:var(--muted)}
   </section>
 
   <footer>Race predictions use Daniels and Gilbert's VDOT equations; threshold pace is about 88% of VO2max and easy pace 60-70%. Treat them as starting points: let the HR cap rule a sub-threshold session, run at altitude by effort, and reset the VDOT after every race. Two rules from autumn 2026: no single week far above your normal volume, and no all-out race within 4 weeks of a marathon.</footer>
+  </div>
+
+  <div id="tab-plan" class="tabpane" role="tabpanel" style="display:none">
+    <section class="panel planin">
+      <h2>Training plan</h2>
+      <p class="hint" style="margin:4px 0 12px">Builds a week-by-week plan from your VDOT on the Running tab, using the sessions in the library. Phases follow “When to use what”: base, transition, specific and taper.</p>
+      <div class="pgrid">
+        <label class="hint">Race<select id="pDist" data-k="dist"><option value="5000">5K</option><option value="10000">10K</option><option value="21097.5">Half marathon</option><option value="42195">Marathon</option></select></label>
+        <label class="hint">Race date<input type="date" id="pRace" data-k="race"></label>
+        <label class="hint">Plan starts (week of)<input type="date" id="pStart" data-k="start"></label>
+        <label class="hint">Runs per week<select id="pRuns" data-k="runs"><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option></select></label>
+        <label class="hint">Current km per week<input type="number" id="pCur" data-k="cur" min="10" max="250" step="1"></label>
+        <label class="hint">Peak km per week<input type="number" id="pPeak" data-k="peak" min="10" max="250" step="1"></label>
+        <label class="hint">Sub-threshold days<select id="pSub" data-k="sub"><option value="2">2 a week</option><option value="3">3 a week (NSM)</option></select></label>
+        <label class="hint">Quality days<select id="pQ" data-k="qdays"><option value="1,3,5">Tue · Thu · Sat</option><option value="0,2,4">Mon · Wed · Fri</option><option value="1,2,4">Tue · Wed · Fri</option><option value="1,3,6">Tue · Thu · Sun</option></select></label>
+        <label class="hint">Long run<select id="pLong" data-k="long"><option value="6">Sunday</option><option value="5">Saturday</option></select></label>
+      </div>
+      <div class="restpick"><span class="hint">Rest days <span id="restHint">(none picked: the plan chooses)</span></span><div class="days" id="pRest" role="group" aria-label="Rest days"></div></div>
+      <div class="pact"><button class="chip primary" id="pIcs" type="button">Download calendar (.ics)</button><span class="hint" id="pMsg"></span></div>
+      <details class="hint pinfo"><summary>Getting it into Intervals.icu, Google, Apple or Outlook</summary>
+        <p><b>Google, Apple or Outlook calendar:</b> import the .ics file. Each run becomes an all-day event with the workout and paces in the description.</p>
+        <p><b>Intervals.icu:</b> it adds calendars by web address, not by file. Upload the .ics to your GitHub repository (for example as plan.ics), then in Intervals.icu add a calendar with that address (yourname.github.io/your-repo/plan.ics). Intervals.icu reads the workout text in each description, so the sessions arrive as structured workouts with paces that can sync to your watch. To add a single session instead, open “Workout text” under it and paste it into the Intervals.icu workout builder.</p>
+        <p>A quality day that clashes with the long run day is dropped. Check the plan before a big change in volume: it ramps at most 10% a week towards your peak.</p>
+      </details>
+    </section>
+    <div id="planOut" class="tabpane"></div>
   </div>
 
   <div id="tab-strength" class="tabpane" role="tabpanel" style="display:none">
@@ -380,13 +453,14 @@ ol.ex span.d{display:block;color:var(--muted)}
   const S = {vd:55.7, unit:'km', maxhr:188, lthr:166, dist:'21097.5', time:'1:23:22', fromRace:true, filter:'all', rep:'time'};
   try{const s=JSON.parse(localStorage.getItem('wpl-state')||'null'); if(s) Object.assign(S,s);}catch(e){}
   S.cw=Object.assign({on:false,temp:'',dew:'',hill:'',hillType:'loop',wind:'',windType:'oab',shelter:'1',surface:'1'},S.cw||{});
+  S.cp=Object.assign({on:false,temp:'',dew:'',hill:'',hillType:'loop',wind:'',windType:'oab',shelter:'1',surface:'1'},S.cp||{});
   S.cr=Object.assign({on:false,temp:'',dew:'',route:'loop',climb:'',descent:'',wind:'',windType:'oab',shelter:'1',surface:'1'},S.cr||{});
   const save=()=>{try{localStorage.setItem('wpl-state',JSON.stringify(S));}catch(e){}};
 
   // page tabs
   function setTab(t){
     S.tab=t;
-    ['paces','strength','health'].forEach(k=>{
+    ['paces','plan','strength','health'].forEach(k=>{
       document.getElementById('tab-'+k).style.display = k===t ? 'grid' : 'none';
       document.getElementById('btn-'+k).setAttribute('aria-selected', k===t);
     });
@@ -395,7 +469,8 @@ ol.ex span.d{display:block;color:var(--muted)}
   document.getElementById('btn-paces').addEventListener('click',()=>setTab('paces'));
   document.getElementById('btn-strength').addEventListener('click',()=>setTab('strength'));
   document.getElementById('btn-health').addEventListener('click',()=>setTab('health'));
-  setTab(['strength','health'].includes(S.tab) ? S.tab : 'paces');
+  document.getElementById('btn-plan').addEventListener('click',()=>setTab('plan'));
+  setTab(['plan','strength','health'].includes(S.tab) ? S.tab : 'paces');
 
   // pace helpers, all in seconds per km
   let R,T,E;
@@ -609,10 +684,277 @@ ol.ex span.d{display:block;color:var(--muted)}
         + (cr.warn.length ? `<br><span class="warn">${cr.warn.join('; ')}.</span>` : '');
     }
     $('crSum').innerHTML=rs;
-    const tags=[]; if(S.cw.on&&cw.active) tags.push(`workouts ${sgn(y-x)} s/km`); if(S.cr.on&&cr.active&&S.fromRace) tags.push('VDOT adjusted for race conditions');
+    // upcoming race
+    const cp=condFx(S.cp,false);
+    if(!cp.active) $('cpSum').innerHTML='No adjustment: ideal conditions.';
+    else {
+      const sl=[[10000,'10K'],[HM,'Half'],[M,'Marathon']].map(([d,n])=>{ const t0=raceMin(S.vd,d)*60, t1=cp.f(R(d))*d/1000; return `${n} <b>${mmss(t1)}</b> (+${mmss(t1-t0)})`; });
+      $('cpSum').innerHTML = `${sl.join(' · ')}.` + (S.cp.on ? '' : ' <span class="hint">Tick “Adjust” to show them in Your paces.</span>') + (cp.warn.length ? `<br><span class="warn">${cp.warn.join('; ')}.</span>` : '');
+    }
+    const tags=[]; if(S.cw.on&&cw.active) tags.push(`workouts ${sgn(y-x)} s/km`); if(S.cp.on&&cp.active) tags.push('race predictions adjusted'); if(S.cr.on&&cr.active&&S.fromRace) tags.push('VDOT adjusted for race conditions');
     $('condSum').textContent = tags.length ? tags.join(' · ') : 'Adjust paces and your VDOT for heat, hills and wind';
-    $('condNote').hidden = !(S.cw.on&&cw.active);
-    $('condNote').textContent = 'Race predictions and paces in this table are for ideal conditions. The workout paces below include today’s conditions.';
+    const wOn=S.cw.on&&cw.active, pOn=S.cp.on&&cp.active;
+    $('condNote').hidden = !(wOn||pOn);
+    $('condNote').textContent = (pOn ? 'Predicted time and pace are for ideal conditions; “In race conditions” adds the upcoming race’s heat, hills and wind. ' : 'Race predictions here are for ideal conditions. ') + (wOn ? 'The workout paces below include today’s conditions.' : '');
+  }
+
+  // ---- Training plan generator ----
+  const DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const ymd = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const parseYmd = s => { const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(s||''); return m ? new Date(+m[1],m[2]-1,+m[3]) : null; };
+  const addD = (d,n) => new Date(d.getFullYear(), d.getMonth(), d.getDate()+n);
+  const monday = d => addD(d, -((d.getDay()+6)%7));
+  const fmtDay = d => `${DAYS[(d.getDay()+6)%7]} ${d.getDate()} ${d.toLocaleDateString('en-GB',{month:'short'})}`;
+  const today0 = () => { const n=new Date(); return new Date(n.getFullYear(),n.getMonth(),n.getDate()); };
+  S.plan=Object.assign({dist:'42195', race:'', start:'', runs:'5', cur:'50', peak:'80', sub:'3', long:'6', qdays:'1,3,5', rest:''}, S.plan||{});
+  if(!parseYmd(S.plan.start)) S.plan.start=ymd(addD(monday(today0()),7));
+  if(!parseYmd(S.plan.race)) S.plan.race=ymd(addD(parseYmd(S.plan.start),7*15+6));
+  const RNAME={'5000':'5K','10000':'10K','21097.5':'Half marathon','42195':'Marathon'};
+  const r05 = x => Math.round(x*2)/2;
+
+  // session templates at the current VDOT; paces in s/km [fast, slow]
+  function templates(){
+    const mp=R(M), E0=E;
+    const iv=(name,reps,size,rec,pace,lab,hr,o={})=>({kind:'iv',name,reps,size,rec,pace,lab,hr,...o});
+    return {
+      subShort:[
+        iv('25 × 400 m',25,{d:400},{t:30,stand:true},[R(10000),R(10000)+3],'10K pace','subS'),
+        iv('10 × 3 min',10,{t:180},{t:60},[R(15000),R(HM)],'15K–HM pace','subS'),
+        iv('8 × 1000 m',8,{d:1000},{t:60},[R(15000),R(HM)],'15K–HM pace','subS')],
+      subLong:[
+        iv('5 × 6 min',5,{t:360},{t:60},[R(HM),R(HM)+5],'HM pace','subS'),
+        iv('4 × 8 min',4,{t:480},{t:90},[R(25000),R(30000)],'25–30K pace','subL'),
+        iv('3 × 10 min',3,{t:600},{t:90},[R(25000),R(30000)],'25–30K pace','subL')],
+      subMP: iv('3 × 17 min',3,{t:1020},{t:150},[mp-2,mp+5],'MP','mp'),
+      vo2:[
+        iv('16 × 30 s on / 30 s off',16,{t:30},{t:30,float:true},[R(1500),R(3000)],'1500 m–3K pace','vo2'),
+        iv('5 × 3 min',5,{t:180},{t:150},[R(3000),R(5000)],'3K–5K pace','vo2'),
+        iv('6 × 1000 m',6,{d:1000},{t:120},[R(5000)-3,R(5000)],'5K pace','vo2'),
+        iv('20 × 400 m',20,{d:400},{t:60,stand:true},[R(5000),R(5000)+2],'5K pace','vo2')],
+      race:{
+        '5000':[iv('20 × 400 m',20,{d:400},{t:60,stand:true},[R(5000)-1,R(5000)+1],'5K pace','race'), iv('5 × 1000 m',5,{d:1000},{t:120},[R(5000)-3,R(5000)],'5K pace','race'), iv('3 × 1600 m',3,{d:1600},{t:150},[R(5000),R(5000)+2],'5K pace','race')],
+        '10000':[iv('25 × 400 m',25,{d:400},{t:30,stand:true},[R(10000),R(10000)+2],'10K pace','race'), iv('8 × 1000 m',8,{d:1000},{t:60},[R(10000)-5,R(10000)-3],'just faster than 10K pace','race'), iv('5 × 2 km',5,{d:2000},{t:90},[R(10000)-2,R(10000)],'10K pace','race'), iv('3 × 3 km',3,{d:3000},{t:120},[R(10000),R(10000)+2],'10K pace','race')],
+        '21097.5':[iv('8 × 2 km',8,{d:2000},{t:60,float:true},[R(HM)-3,R(HM)-1],'just faster than HM pace','race'), iv('4 × 4 km',4,{d:4000},{t:90},[R(HM)-3,R(HM)],'HM pace','race'), iv('3 × 5 km',3,{d:5000},{t:120},[R(HM)-1,R(HM)+1],'HM pace','race'), iv('2 × 6 km',2,{d:6000},{t:120},[R(HM),R(HM)+4],'HM pace','race')],
+        '42195':[iv('3 × 17 min',3,{t:1020},{t:150},[mp-2,mp+5],'MP','mp'), iv('2 × 8 km',2,{d:8000},{d:1000,float:true},[mp-2,mp+3],'MP','mp'), iv('3 × 5 km',3,{d:5000},{d:1000,float:true},[mp-2,mp+3],'MP','mp')]
+      },
+      sharpen:{
+        '5000':iv('6 × 400 m',6,{d:400},{t:60},[R(5000)-1,R(5000)+1],'5K pace','race'),
+        '10000':iv('4 × 1000 m',4,{d:1000},{t:90},[R(10000)-2,R(10000)],'10K pace','race'),
+        '21097.5':iv('3 × 2 km',3,{d:2000},{t:90},[R(HM)-1,R(HM)+1],'HM pace','race'),
+        '42195':iv('2 × 3 km',2,{d:3000},{t:120},[mp-2,mp+3],'MP','mp')
+      },
+      mlong:[
+        {kind:'seg',name:'Long run with 3 × 5 km at MP',segs:[[5000,E0,'Easy'],[5000,[mp-2,mp+3],'MP'],[1000,E0,'Float'],[5000,[mp-2,mp+3],'MP'],[1000,E0,'Float'],[5000,[mp-2,mp+3],'MP'],[4000,E0,'Easy']],lab:'MP',hr:'mp'},
+        {kind:'seg',name:'Long run, last 12 km at MP',segs:[[16000,E0,'Easy'],[12000,[mp-2,mp+3],'MP']],lab:'MP',hr:'mp'},
+        {kind:'seg',name:'Long run with 2 × 8 km at MP',segs:[[5000,E0,'Easy'],[8000,[mp-2,mp+3],'MP'],[1000,E0,'Float'],[8000,[mp-2,mp+3],'MP'],[3000,E0,'Easy']],lab:'MP',hr:'mp'},
+        {kind:'seg',name:'Long run, last 14 km at MP',segs:[[16000,E0,'Easy'],[14000,[mp-2,mp+3],'MP']],lab:'MP',hr:'mp'}
+      ]
+    };
+  }
+  const midP = p => (p[0]+p[1])/2;
+  function sessKm(s){
+    if(s.kind==='iv'){
+      const work = s.size.d ? s.size.d/1000 : s.size.t/midP(s.pace);
+      const rec = s.rec.stand ? 0 : s.rec.d ? s.rec.d/1000 : s.rec.t/(midP(E)+(s.rec.float?0:30));
+      return r05(5 + s.reps*work + Math.max(0,s.reps-1)*rec);
+    }
+    if(s.kind==='seg') return r05(s.segs.reduce((a,x)=>a+x[0],0)/1000);
+    return s.km||0;
+  }
+  const scaleReps = (s,f) => { const n=Math.max(2,Math.round(s.reps*f)); return {...s, reps:n, name:s.name.replace(/^\d+/, String(n))}; };
+  const easy = (km, extra) => ({kind:'easy', name: extra ? `Easy run + ${extra}` : 'Easy run', km:r05(km), pace:E, lab:'easy pace', hr:'easy', strides: !!extra});
+
+  function buildPlan(){
+    const P=S.plan, dist=P.dist, isM=dist==='42195', isHM=dist==='21097.5';
+    const race=parseYmd(P.race), st=parseYmd(P.start);
+    if(!race||!st) return {err:'Pick a race date and a start date.'};
+    const start=monday(st), rw=monday(race);
+    const nW=Math.round((rw-start)/(7*864e5))+1;
+    if(nW<6) return {err:`The race is ${Math.max(nW,0)} weeks after the plan start; a plan needs at least 6 weeks.`};
+    if(nW>24) return {err:`That is ${nW} weeks; plans go up to 24 weeks. Move the start date closer to the race.`};
+    const longDay0=+P.long, restSet=new Set((P.rest||'').split(',').filter(x=>x!=='').map(Number).filter(d=>d!==longDay0));
+    const avail=7-restSet.size, warn=[];
+    if(+P.runs>avail) warn.push(`${restSet.size} rest days leave room for ${avail} runs a week, so the plan uses ${avail} instead of ${P.runs}.`);
+    const runs=Math.min(avail,Math.min(7,Math.max(3,+P.runs||5))), cur=Math.max(10,+P.cur||40), peak=Math.max(cur,+P.peak||cur);
+    const taper=(isM||isHM)?2:1, spec=Math.min(4,nW-taper-2), trans=nW>=10?2:1, base=nW-taper-spec-trans;
+    const phaseOf=w=> w<base?'Base': w<base+trans?'Transition': w<base+trans+spec?'Specific': 'Taper';
+    const peakIdx=nW-taper-1;
+    // weekly volume: ramp to peak by the last specific week, max +10%/week, every 4th week -20%
+    const vol=[]; let prev=cur;
+    for(let w=0;w<nW;w++){
+      if(w<=peakIdx){
+        const target=cur+(peak-cur)*(w/Math.max(1,peakIdx));
+        const v=Math.min(target, prev*1.1);
+        const deload=(w+1)%4===0 && w<peakIdx;
+        vol.push(Math.round(deload ? v*0.8 : v)); if(!deload) prev=v;
+      } else vol.push(Math.round(w===nW-1 ? peak*((isM||isHM)?0.45:0.6) : peak*0.7));
+    }
+    const T_=templates(), longDay=+P.long;
+    let qd=P.qdays.split(',').map(Number).filter(d=>d!==longDay && !restSet.has(d));
+    const pickedQ=qd.length;
+    // top up quality days that fell on a rest day: prefer days not next to another hard day
+    for(const strict of [true,false]) for(const d of [1,3,5,2,4,0,6]){
+      if(qd.length>=3) break;
+      if(d===longDay||restSet.has(d)||qd.includes(d)) continue;
+      if(strict && [...qd,longDay].some(x=>Math.abs(x-d)===1||Math.abs(x-d)===6)) continue;
+      qd.push(d);
+    }
+    // qd keeps your own picks first; extra days are only used when a week needs more quality days than you picked
+    let usedExtra=false;
+    const capL={'5000':16,'10000':18,'21097.5':22,'42195':30}[dist];
+    const weeks=[]; let specK=0;
+    for(let w=0;w<nW;w++){
+      const phase=phaseOf(w), deload=(w+1)%4===0 && w<peakIdx && phase!=='Taper';
+      const ws=addD(start,7*w), raceWeek=w===nW-1;
+      const nSub = (+P.sub===3 && runs>=5 && !deload && vol[w]>=50) ? 3 : 2;
+      const q=qd.slice(0, Math.min(nSub, Math.max(2, runs-1))).sort((a,b)=>a-b);
+      if(q.length>pickedQ) usedExtra=true;
+      const days=Array(7).fill(null);
+      // quality sessions
+      const Q=[];
+      if(phase==='Base'){
+        Q.push(T_.subShort[w%3]);
+        Q.push(w%2===1 ? T_.vo2[(w>>1)%4] : T_.subLong[(w>>1)%3]);
+        Q.push(T_.subLong[((w>>1)+1)%3]);
+      } else if(phase==='Transition'){
+        Q.push(T_.subShort[w%3]);
+        Q.push({...scaleReps(T_.race[dist][0],0.7), note:'First race-pace session: controlled, not a test.'});
+        Q.push(T_.subLong[w%3]);
+      } else if(phase==='Specific'){
+        Q.push(specK%2===0 ? T_.subShort[specK%3] : T_.subLong[specK%3]);
+        Q.push(T_.race[dist][(isM?specK+1:specK)%T_.race[dist].length]);
+        Q.push(T_.subLong[(specK+1)%3]);
+      } else {
+        Q.push(scaleReps(T_.subShort[1],0.6));
+        Q.push(T_.sharpen[dist]);
+      }
+      // keep quality work to about 30% (35% in the specific phase) of the week's volume: shorten sessions, never below 60%
+      if(phase!=='Taper'){
+        const used=Q.slice(0,q.length), work=used.reduce((a,s)=>a+s.reps*(s.size.d?s.size.d/1000:s.size.t/midP(s.pace)),0);
+        const f=Math.min(1, vol[w]*(phase==='Specific'?0.35:0.3)/work);
+        if(f<1) for(let i=0;i<used.length;i++) Q[i]=scaleReps(Q[i], Math.max(0.6,f));
+      }
+      q.forEach((d,i)=>{ if(Q[i]) days[d]={...Q[i]}; });
+      // long run
+      let L;
+      const longKm=Math.min(capL, Math.max(10, r05(vol[w]*(isM?0.3:0.27))));
+      if(phase==='Specific' && isM && !deload){ L=T_.mlong[specK%4]; }
+      else if(phase==='Specific' && isHM && !deload){ const km=longKm; L={kind:'seg',name:`Long run, last 5 km at MP`,segs:[[(km-5)*1000,E,'Easy'],[5000,[R(M)-2,R(M)+3],'MP']],lab:'easy, then MP',hr:'mp'}; }
+      else if(phase==='Taper') L={kind:'long',name:'Long run',km:r05(longKm*0.65),pace:E,lab:'easy pace',hr:'easy'};
+      else L={kind:'long',name:'Long run',km:longKm,pace:E,lab:'easy pace',hr:'easy'};
+      days[longDay]=L;
+      // easy days
+      const nEasy=Math.max(0, runs - days.filter(Boolean).length);
+      const pref=[2,0,4,6,5,1,3].filter(d=>!days[d] && !restSet.has(d));
+      const easyDays=pref.slice(0,nEasy).sort((a,b)=>a-b);
+      const used=days.filter(Boolean).reduce((a,s)=>a+sessKm(s),0);
+      const ek=nEasy? Math.min(16, Math.max(5, (vol[w]-used)/nEasy)) : 0;
+      easyDays.forEach((d,i)=>{ days[d]=easy(ek, i===0 && phase!=='Taper' ? '6 × 20 s strides' : null); });
+      if(phase==='Specific') specK++;
+      // race week: race, shakeout the day before, rest the 2nd day before and after the race
+      if(raceWeek){
+        const rd=(race.getDay()+6)%7;
+        for(let d=0;d<7;d++){
+          if(d>rd) days[d]=null;
+          else if(d===rd) days[d]={kind:'race',name:`Race: ${RNAME[dist]}`,km:r05(+dist/1000),lab:'race pace',pace:[R(+dist)-1,R(+dist)+1],hr:'race'};
+          else if(d===rd-1) days[d]=easy(4,'4 strides');
+          else if(d===rd-2) days[d]=null;
+          else if(days[d] && days[d].kind!=='iv') days[d]=easy(Math.min(8,days[d].km||6));
+          else if(days[d] && days[d].kind==='iv' && rd-d<3) days[d]=easy(6);
+        }
+        let firstQ=true;
+        for(let d=0;d<rd;d++) if(days[d]&&days[d].kind==='iv'){ if(firstQ){ days[d]=T_.sharpen[dist]; firstQ=false; } else days[d]=easy(6); }
+      }
+      const total=days.filter(Boolean).reduce((a,s)=>a+sessKm(s),0);
+      weeks.push({w, phase, deload, start:ws, days, total:Math.round(total)});
+    }
+    if(usedExtra) warn.push(`A quality day fell on a rest day or the long run day, so ${DAYS[qd[qd.length-1]]} is used as a quality day in some weeks.`);
+    return {weeks, nW, base, trans, spec, taper, dist, race, peak, warn};
+  }
+
+  // Intervals.icu workout text (absolute paces in /km)
+  const pStr = p => `${mmss(Math.min(p[0],p[1]))}-${mmss(Math.max(p[0],p[1]))}/km Pace`;
+  const tStr = t => t%60===0 ? `${t/60}m` : t>60 ? `${Math.floor(t/60)}m${t%60}` : `${t}s`;
+  const dStr = m => `${+(m/1000).toFixed(2)}km`;
+  function workoutText(s){
+    const L=[];
+    if(s.kind==='iv'){
+      L.push('Warmup',`- 3km ${pStr(E)}`,'',`Main Set ${s.reps}x`, `- ${s.size.d?dStr(s.size.d):tStr(s.size.t)} ${pStr(s.pace)}`);
+      if(s.reps>1) L.push(s.rec.stand ? `- Standing rest ${tStr(s.rec.t)}` : s.rec.float ? `- Float ${s.rec.d?dStr(s.rec.d):tStr(s.rec.t)} ${pStr(E)}` : `- Jog ${tStr(s.rec.t)}`);
+      L.push('','Cooldown',`- 2km ${pStr(E)}`);
+    } else if(s.kind==='seg'){
+      s.segs.forEach(([m,p,lab])=>L.push(`- ${lab} ${dStr(m)} ${pStr(p)}`));
+    } else if(s.kind==='race'){
+      L.push(`- ${dStr(s.km*1000)} ${pStr(s.pace)}`);
+    } else {
+      L.push(`- ${dStr(s.km*1000)} ${pStr(E)}`);
+      if(s.strides){ const n=/^\d+/.exec(s.name.split('+ ')[1]||'')?.[0]||6; L.push('',`Strides ${n}x`,`- 20s ${pStr([R(1500)-5,R(1500)+5])}`,'- Walk 40s'); }
+    }
+    const hrs=hr[s.hr]?hr[s.hr]():''; const notes=[]; if(hrs) notes.push(`HR ${hrs}`); if(s.note) notes.push(s.note);
+    if(notes.length) L.push('',notes.join('. '));
+    return L.join('\n');
+  }
+
+  let PLAN=null;
+  function renderPlan(){
+    const out=$('planOut'); if(!out) return;
+    PLAN=buildPlan();
+    if(PLAN.err){ out.innerHTML=`<p class="err panel">${esc(PLAN.err)}</p>`; $('pIcs').disabled=true; return; }
+    $('pIcs').disabled=false;
+    const {weeks,nW,dist,peak}=PLAN, sum=weeks.reduce((a,w)=>a+w.total,0), mx=Math.max(...weeks.map(w=>w.total));
+    const phaseCol={Base:'--c-subt',Transition:'--c-thr',Specific:'--c-race',Taper:'--c-vo2'};
+    let h=`<section class="panel"><h3 style="margin-top:0">${RNAME[dist]} on ${fmtDay(PLAN.race)}: ${nW} weeks, ${sum} km</h3>
+      <p class="hint" style="margin:0 0 10px">Base ${PLAN.base} · transition ${PLAN.trans} · specific ${PLAN.spec} · taper ${PLAN.taper} weeks. Paces from VDOT ${S.vd.toFixed(1)}; race pace ${mmss(u(R(+dist)))}${uLbl()}. Every 4th week is lighter. Quality sessions are shortened when they would be more than about 30% of the week; 3 sub-threshold days need 50+ km a week.</p>
+      ${PLAN.warn.length?`<p class="pwarn">${PLAN.warn.map(esc).join(' ')}</p>`:''}
+      <div class="vbars">${weeks.map(w=>`<div class="vb" title="Week ${w.w+1}: ${w.total} km" style="--h:${Math.round(w.total/mx*100)}%;--dot:var(${phaseCol[w.phase]})"><span>${w.total}</span></div>`).join('')}</div>
+      <div class="vleg">${Object.entries(phaseCol).map(([k,c])=>`<span style="--dot:var(${c})"><i></i>${k}</span>`).join('')}</div></section>`;
+    for(const wk of weeks){
+      h+=`<section class="panel week" style="--dot:var(${phaseCol[wk.phase]})"><div class="wkhead"><b>Week ${wk.w+1}</b><span>${fmtDay(wk.start)} – ${fmtDay(addD(wk.start,6))}</span><span class="tag" style="margin:0">${wk.phase}${wk.deload?' · lighter':''}</span><span class="wkkm">${wk.total} km${wk.w===nW-1?' incl. race':''}</span></div>`;
+      wk.days.forEach((s,d)=>{
+        const date=addD(wk.start,d);
+        if(!s){ h+=`<div class="pday rest"><span class="pd">${fmtDay(date)}</span><span>Rest</span></div>`; return; }
+        const km=sessKm(s), pace=s.pace?`${rng(s.pace[0],s.pace[1])}${uLbl()} (${s.lab})`:'';
+        const hrs=hr[s.hr]?hr[s.hr]():'';
+        h+=`<div class="pday${s.kind==='race'?' race':''}"><span class="pd">${fmtDay(date)}</span><div><b>${esc(s.name)}</b> <span class="hint">· ${km} km</span>
+          <div class="hint">${pace}${hrs?` · HR ${hrs}`:''}${s.note?` · ${esc(s.note)}`:''}</div>
+          ${s.kind!=='easy'&&s.kind!=='long'?`<details class="wtxt"><summary>Workout text</summary><pre>${esc(workoutText(s))}</pre></details>`:''}</div></div>`;
+      });
+      h+='</section>';
+    }
+    out.innerHTML=h;
+  }
+
+  // .ics export (Intervals.icu reads the workout text in each description)
+  function icsText(){
+    const icsEsc=s=>String(s).replace(/\\/g,'\\\\').replace(/;/g,'\;').replace(/,/g,'\\,').replace(/\r?\n/g,'\\n');
+    const enc=new TextEncoder();
+    const fold=line=>{ const out=[]; let cur='', len=0, lim=75; for(const ch of line){ const b=enc.encode(ch).length; if(len+b>lim){ out.push(cur); cur=' '; len=1; lim=75; } cur+=ch; len+=b; } out.push(cur); return out.join('\r\n'); };
+    const c=d=>ymd(d).replace(/-/g,''), now=new Date(), stamp=now.toISOString().replace(/[-:]/g,'').replace(/\.\d+Z$/,'Z');
+    const L=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Run2Plan//Training plan//EN','CALSCALE:GREGORIAN',`X-WR-CALNAME:Run2Plan ${RNAME[PLAN.dist]}`];
+    for(const wk of PLAN.weeks) wk.days.forEach((s,d)=>{
+      if(!s) return; const date=addD(wk.start,d), km=sessKm(s);
+      const title=`${s.name} (${km} km)`;
+      const desc=`${workoutText(s)}\n\nWeek ${wk.w+1}, ${wk.phase}. Run2Plan`;
+      L.push('BEGIN:VEVENT',`UID:run2plan-${PLAN.dist}-${ymd(PLAN.race)}-${c(date)}`,`DTSTAMP:${stamp}`,`DTSTART;VALUE=DATE:${c(date)}`,`DTEND;VALUE=DATE:${c(addD(date,1))}`,`SUMMARY:${icsEsc(title)}`,`DESCRIPTION:${icsEsc(desc)}`,'TRANSP:TRANSPARENT','END:VEVENT');
+    });
+    L.push('END:VCALENDAR');
+    return L.map(fold).join('\r\n')+'\r\n';
+  }
+  async function downloadIcs(){
+    if(!PLAN||PLAN.err) return;
+    const txt=icsText(), name=`run2plan-${RNAME[PLAN.dist].toLowerCase().replace(/\s+/g,'-')}-${ymd(PLAN.race)}.ics`;
+    const msg=$('pMsg');
+    if(window.claude && typeof window.claude.use==='function'){
+      const dl=await window.claude.use('downloads').catch(()=>null);
+      if(dl){
+        try{ await dl.save({filename:name+'.txt', data:txt}); msg.textContent='Saved as .ics.txt because Claude only saves certain file types: remove “.txt” from the name before importing.'; }
+        catch(e){ msg.textContent = e&&e.code==='declined' ? 'Download cancelled.' : 'Could not save here. Use your GitHub version to download the .ics file.'; }
+        return;
+      }
+    }
+    const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([txt],{type:'text/calendar'})); a.download=name;
+    document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href); a.remove();},1000);
+    msg.textContent=`Downloaded ${name}.`;
   }
 
   // ---- UI wiring ----
@@ -649,10 +991,13 @@ ol.ex span.d{display:block;color:var(--muted)}
 
     // reference table
     const races=[['1500 m',1500],['Mile',1609.344],['3K',3000],['5K',5000],['10K',10000],['15K',15000],['Half marathon',HM],['Marathon',M]];
-    let h=`<thead><tr><th>Intensity</th><th>Predicted time</th><th>Pace ${uLbl()}</th><th>Per 400 m</th><th>HR</th></tr></thead><tbody>`;
-    for(const [l,d] of races){ const p=R(d); h+=`<tr><td>${l}</td><td class="p">${mmss(raceMin(S.vd,d)*60)}</td><td class="p">${mmss(u(p))}</td><td class="p">${mmss(p*0.4)}</td><td></td></tr>`; }
-    h+=`<tr><td>Threshold (T)</td><td></td><td class="p">${mmss(u(T))}</td><td class="p">${mmss(T*0.4)}</td><td>${hr.thr()}</td></tr>`;
-    h+=`<tr><td>Easy</td><td></td><td class="p">${rng(E[0],E[1])}</td><td></td><td>${hr.easy()}</td></tr></tbody>`;
+    // race predictions: ideal conditions, plus an "in these conditions" column when upcoming race conditions are on
+    const CP=S.cp.on?condFx(S.cp,false):null, PA=CP&&CP.active?CP.f:null;
+    const cpCell=(p,km)=>PA?`<td class="p cpc">${km?mmss(PA(p)*km):''}<small>${mmss(u(PA(p)))}${uLbl()}</small></td>`:'';
+    let h=`<thead><tr><th>Intensity</th><th>Predicted time</th><th>Pace ${uLbl()}</th>${PA?'<th>In race conditions</th>':''}<th>Per 400 m</th><th>HR</th></tr></thead><tbody>`;
+    for(const [l,d] of races){ const p=R(d); h+=`<tr><td>${l}</td><td class="p">${mmss(raceMin(S.vd,d)*60)}</td><td class="p">${mmss(u(p))}</td>${cpCell(p,d/1000)}<td class="p">${mmss(p*0.4)}</td><td></td></tr>`; }
+    h+=`<tr><td>Threshold (T)</td><td></td><td class="p">${mmss(u(T))}</td>${cpCell(T,0)}<td class="p">${mmss(T*0.4)}</td><td>${hr.thr()}</td></tr>`;
+    h+=`<tr><td>Easy</td><td></td><td class="p">${rng(E[0],E[1])}</td>${PA?`<td class="p cpc">${rng(PA(E[0]),PA(E[1]))}${uLbl()}</td>`:''}<td></td><td>${hr.easy()}</td></tr></tbody>`;
     $('refTable').innerHTML=h;
 
     // chips
@@ -663,7 +1008,7 @@ ol.ex span.d{display:block;color:var(--muted)}
     // categories
     const WA=workAdj(), ADJ = WA&&WA.active ? WA.f : ID;
     $('cats').innerHTML=CATS.filter(c=>S.filter==='all'||S.filter===c.id).map(c=>{
-      const racep = c.race ? ` <span class="tag">race pace ${mmss(u(R(c.race)))}${uLbl()}</span>` : '';
+      const racep = c.race ? ` <span class="tag">race pace ${mmss(u(R(c.race)))}${uLbl()}${PA?` · ${mmss(u(PA(R(c.race))))}${uLbl()} in race conditions`:''}</span>` : '';
       const rows=c.items.map((w,i)=>({w,i,r:w.p?w.p().map(ADJ):null})).map(o=>(o.s=repSec(o.w,o.r),o)).sort((a,b)=>a.s-b.s||a.i-b.i).map(({w,r})=>{
         let pace='', rep=perRep(w,r);
         if(w.p){ pace=`${rng(r[0],r[1])}<small>${uLbl()}</small>`+(w.pl?`<small class="pl">${w.pl}</small>`:'');
@@ -676,6 +1021,7 @@ ol.ex span.d{display:block;color:var(--muted)}
         <div class="panel scroll" style="padding:4px 8px"><table><thead><tr><th>Session</th><th>Recovery</th><th>Pace</th><th>${S.rep==='time'?'Rep distance':'Rep time'}</th><th>HR</th><th>Notes</th></tr></thead><tbody>${rows}</tbody></table></div></section>`;
     }).join('');
     condSummaries();
+    renderPlan();
     if(EDITING) setEditable(true);
     save();
   }
@@ -683,7 +1029,7 @@ ol.ex span.d{display:block;color:var(--muted)}
   // ---- In-place text editing, saved as a new version of the page ----
   let EDITING=false, ART=null, ORIG=[];
   const STATIC_SEL='h1, .lede, .wrap h2, .panel h3, .ref > p.hint, .phase th, .phase td, ul.plan li, ol.ex b, ol.ex .dose, ol.ex span.d, .cathead p, #tab-strength p.hint, #tab-health p, footer';
-  const isStatic = el => !el.closest('#cats, #refTable, #chips, .controls, .editbar, .cond');
+  const isStatic = el => !el.closest('#cats, #refTable, #chips, .controls, .editbar, .cond, #planOut, .planin');
   const staticEls = root => [...root.querySelectorAll(STATIC_SEL)].filter(isStatic);
   function clean(html){
     const t=document.createElement('template'); t.innerHTML=html;
@@ -773,7 +1119,7 @@ ol.ex span.d{display:block;color:var(--muted)}
   $('rDist').onclick=()=>{S.rep='dist';render();};
   const raceVd = () => { const sec=parseTime(S.time); if(sec) S.vd=Math.round(vdotOf(parseFloat(S.dist),idealSec(sec,parseFloat(S.dist))/60)*10)/10; };
   // conditions inputs
-  for(const set of ['cw','cr']){
+  for(const set of ['cw','cp','cr']){
     $(set).querySelectorAll('[data-k]').forEach(el=>{
       const k=el.dataset.k;
       if(el.type==='checkbox') el.checked=!!S[set][k]; else el.value=S[set][k];
@@ -784,6 +1130,27 @@ ol.ex span.d{display:block;color:var(--muted)}
       });
     });
   }
+  // plan inputs
+  document.querySelectorAll('.planin [data-k]').forEach(el=>{
+    const k=el.dataset.k; el.value=S.plan[k];
+    el.addEventListener('change',()=>{ S.plan[k]=el.value; save(); renderPlan(); });
+  });
+  $('pIcs').addEventListener('click',downloadIcs);
+  function drawRest(){
+    const rs=new Set((S.plan.rest||'').split(',').filter(x=>x!=='').map(Number)), L=+S.plan.long;
+    $('pRest').innerHTML=DAYS.map((n,d)=>`<button type="button" data-d="${d}" aria-pressed="${rs.has(d)&&d!==L}"${d===L?' class="lock" title="Long run day"':''}>${n}</button>`).join('');
+    $('restHint').textContent = rs.size ? '' : '(none picked: the plan chooses)';
+  }
+  $('pRest').addEventListener('click',e=>{
+    const b=e.target.closest('button'); if(!b) return; const d=+b.dataset.d;
+    if(d===+S.plan.long){ $('pMsg').textContent='The long run day can’t be a rest day; change the long run day first.'; return; }
+    const rs=new Set((S.plan.rest||'').split(',').filter(x=>x!=='').map(Number));
+    rs.has(d)?rs.delete(d):rs.add(d);
+    if(rs.size>4){ $('pMsg').textContent='Keep at least 3 running days.'; return; }
+    S.plan.rest=[...rs].sort((a,b)=>a-b).join(','); $('pMsg').textContent=''; save(); drawRest(); renderPlan();
+  });
+  $('pLong').addEventListener('change',drawRest);
+  drawRest();
   $('condPanel').open=!!S.condOpen;
   $('condPanel').addEventListener('toggle',()=>{S.condOpen=$('condPanel').open;save();});
   if(S.fromRace) raceVd();
