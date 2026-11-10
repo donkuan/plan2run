@@ -414,7 +414,7 @@ ol.ex span.d{display:block;color:var(--muted)}
     </section>
   </div>
 </div>
-<script type="application/json" id="wpl-edits">{}</script>
+<script type="application/json" id="wpl-edits">{"i.vo2.Hill reps: 2 × 12 × 35 s.note":"Almgren X-session: 1500 m race effort for 35 s uphill. On the hill that effort comes out around your 10K pace, so that is the pace shown; let the effort lead if the gradient differs. Much harder than threshold (lactate 10–12 for him, about 3× LT2). Tired afterwards but not spent. Go by effort, not HR: on 35 s reps HR lags behind."}</script>
 <script>
 (function(){
   // ---- Page source, captured before anything renders: saving an edit rebuilds the document from this, never from the live DOM ----
@@ -752,6 +752,19 @@ ol.ex span.d{display:block;color:var(--muted)}
     };
   }
   const midP = p => (p[0]+p[1])/2;
+  // Your race-week sessions: % of threshold speed (95% = slightly slower than threshold pace)
+  function taperSession(which){
+    const pc=f=>T/f, band=(a,b)=>[pc(b),pc(a)];
+    const easyP=band(0.6525,0.705), floatP=band(0.675,0.73), sub=[pc(0.95)-2,pc(0.95)+2], sub98=[pc(0.98)-2,pc(0.98)+2];
+    const rep=(n,t,p,ft)=>({title:`Workout ${n}x`, steps:[{cue:'SubT',t,pace:p},{cue:'Float',t:ft,pace:floatP}], n});
+    const groups = which==='A'
+      ? [{title:'Warmup',steps:[{cue:'Easy',t:1200,pace:easyP}],n:1}, rep(4,360,sub,60), rep(2,180,sub,60), rep(4,90,sub98,60), {title:'Cooldown',steps:[{cue:'Easy',t:600,pace:easyP}],n:1}]
+      : [{title:'Warmup',steps:[{cue:'Easy',t:1200,pace:easyP}],n:1}, rep(3,300,sub,60), {title:'Rest',steps:[{cue:'Easy',t:60,pace:floatP}],n:1}, rep(3,60,sub98,45), {title:'Cooldown',steps:[{cue:'Easy',t:600,pace:easyP}],n:1}];
+    const steps=groups.flatMap(g=>Array.from({length:g.n},()=>g.steps).flat());
+    return {kind:'blk', name: which==='A' ? 'Taper: 4 × 6 min, 2 × 3 min, 4 × 90 s' : 'Taper: 3 × 5 min, 3 × 1 min',
+      groups, steps, pace:[pc(0.98),pc(0.95)], lab:'95–98% of threshold pace', hr:'subS',
+      note: which==='A' ? '6 days before the race. 1 min floats.' : '4 days before the race. 1 min floats, 45 s after the 1-min reps.'};
+  }
   function sessKm(s){
     if(s.kind==='iv'){
       const work = s.size.d ? s.size.d/1000 : s.size.t/midP(s.pace);
@@ -759,6 +772,7 @@ ol.ex span.d{display:block;color:var(--muted)}
       return r05(5 + s.reps*work + Math.max(0,s.reps-1)*rec);
     }
     if(s.kind==='seg') return r05(s.segs.reduce((a,x)=>a+x[0],0)/1000);
+    if(s.kind==='blk') return r05(s.steps.reduce((a,x)=>a+x.t/midP(x.pace),0));
     return s.km||0;
   }
   const scaleReps = (s,f) => { const n=Math.max(2,Math.round(s.reps*f)); return {...s, reps:n, name:s.name.replace(/^\d+/, String(n))}; };
@@ -862,12 +876,23 @@ ol.ex span.d{display:block;color:var(--muted)}
           else if(days[d] && days[d].kind!=='iv') days[d]=easy(Math.min(8,days[d].km||6));
           else if(days[d] && days[d].kind==='iv' && rd-d<3) days[d]=easy(6);
         }
-        let firstQ=true;
-        for(let d=0;d<rd;d++) if(days[d]&&days[d].kind==='iv'){ if(firstQ){ days[d]=T_.sharpen[dist]; firstQ=false; } else days[d]=easy(6); }
+        for(let d=0;d<rd;d++) if(days[d]&&days[d].kind==='iv') days[d]=easy(6);
       }
-      const total=days.filter(Boolean).reduce((a,s)=>a+sessKm(s),0);
-      weeks.push({w, phase, deload, start:ws, days, total:Math.round(total)});
+      weeks.push({w, phase, deload, start:ws, days});
     }
+    // your taper: sub-threshold blocks 6 and 4 days before the race, easy runs in between
+    const at = off => { const d=addD(race,-off), i=Math.round((monday(d)-start)/(7*864e5)); return i>=0&&i<weeks.length ? [weeks[i],(d.getDay()+6)%7] : null; };
+    const taperA=taperSession('A'), taperB=taperSession('B');
+    for(const [off,sess] of [[6,taperA],[5,null],[4,taperB],[3,null]]){
+      const t=at(off); if(!t) continue; const [wk,d]=t;
+      if(sess) wk.days[d]=sess;
+      else if(wk.days[d] && wk.days[d].kind!=='easy') wk.days[d]=easy(6);
+      else if(!wk.days[d] && off===5) wk.days[d]=null;
+    }
+    // nothing hard in the 7 days before the race apart from these two
+    for(let off=7; off<=9; off++){ const t=at(off); if(t){ const [wk,d]=t; if(wk.days[d]&&wk.days[d].kind==='iv'&&off===7) wk.days[d]=easy(8); } }
+    for(let off=1; off<=5; off++){ const t=at(off); if(t){ const [wk,d]=t, x=wk.days[d]; if(x&&x.kind==='easy'&&x.km>8) wk.days[d]=easy(8, x.strides?'4 strides':null); } }
+    for(const wk of weeks) wk.total=Math.round(wk.days.filter(Boolean).reduce((a,s)=>a+sessKm(s),0));
     if(usedExtra) warn.push(`A quality day fell on a rest day or the long run day, so ${DAYS[qd[qd.length-1]]} is used as a quality day in some weeks.`);
     return {weeks, nW, base, trans, spec, taper, dist, race, peak, warn};
   }
@@ -884,6 +909,13 @@ ol.ex span.d{display:block;color:var(--muted)}
       L.push('','Cooldown',`- 2km ${pStr(E)}`);
     } else if(s.kind==='seg'){
       s.segs.forEach(([m,p,lab])=>L.push(`- ${lab} ${dStr(m)} ${pStr(p)}`));
+    } else if(s.kind==='blk'){
+      for(const g of s.groups){
+        L.push(g.title);
+        for(const st of g.steps) L.push(`- ${st.cue?st.cue+' ':''}${tStr(st.t)} ${pStr(st.pace)}`);
+        L.push('');
+      }
+      L.pop();
     } else if(s.kind==='race'){
       L.push(`- ${dStr(s.km*1000)} ${pStr(s.pace)}`);
     } else {
