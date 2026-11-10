@@ -789,7 +789,28 @@ ol.ex span.d{display:block;color:var(--muted)}
     // categories decide which sessions can replace each other in the plan
     const tag=(arr,cat)=>arr.forEach(x=>{ x.cat=cat; x.base=x.name; });
     tag(t.subShort,'subt'); tag(t.subLong,'subt'); tag([t.subMP],'subt'); tag(t.vo2,'vo2'); tag(t.race[dist0()],'race'); tag(t.mlong,'mlong');
+    [...t.subShort,...t.subLong,t.subMP,...t.vo2,...t.race[dist0()],...t.mlong].forEach(x=>x.lib=libRef(x));
     return t;
+  }
+  // which row in the running tab a plan session belongs to, so the names you give sessions there show up in the plan
+  const LIBMAP={
+    subt:{'4 × 8 min':'subt.4 × 8 min or 3 × 10 min','3 × 10 min':'subt.4 × 8 min or 3 × 10 min','3 × 17 min':'subt.2 × 15 min or 3 × 17 min'},
+    vo2:{'16 × 30 s on / 30 s off':'vo2.12–20 × 30 s on / 30 s off'},
+    race:{'16 × 30 s on / 30 s off':'vo2.12–20 × 30 s on / 30 s off','2 × 8 km':'mar.2 × 8 km at marathon pace'},
+    mlong:{'Long run with 3 × 5 km at MP':'mar.30 km with 3 × 5 km at marathon pace','Long run, last 12 km at MP':'mar.28–30 km, last 12–16 km at marathon pace','Long run, last 14 km at MP':'mar.28–30 km, last 12–16 km at marathon pace','Long run with 2 × 8 km at MP':'mar.2 × 8 km at marathon pace'}
+  };
+  function libRef(x){
+    const m=LIBMAP[x.cat]&&LIBMAP[x.cat][x.name]; if(m) return m;
+    const rc={'5000':'k5','10000':'k10','21097.5':'hm','42195':'mar'}[dist0()];
+    const look={subt:['subt'], vo2:['vo2'], race:[rc,'vo2'], mlong:['mar']}[x.cat]||[];
+    for(const id of look){ const c=CATS.find(c=>c.id===id); if(c&&c.items.some(w=>w.n===x.name)) return `${id}.${x.name}`; }
+    return null;
+  }
+  // the name to show: your own name from the running tab if you gave one, else the plan's
+  function shown(s){
+    const v=s&&s.lib&&EDITS[`i.${s.lib}.n`], l=v&&String(v).trim();
+    if(!l) return s.name;
+    return s.scaleF&&s.scaleF<1 ? l.replace(/^\d+/, String(s.reps)) : l;
   }
   const dist0 = () => S.plan.dist;
   function catOptions(t,cat){
@@ -959,7 +980,10 @@ ol.ex span.d{display:block;color:var(--muted)}
     // sessions you swapped (same category only)
     for(const wk of weeks) wk.days.forEach((s,d)=>{
       if(!s||!s.cat) return;
-      const key=ymd(addD(wk.start,d)), opts=catOptions(T_,s.cat); s.autoBase=s.base||s.name; s.opts=opts.map(o=>o.name);
+      const key=ymd(addD(wk.start,d)), opts=catOptions(T_,s.cat); s.autoBase=s.base||s.name; s.opts=opts.map(o=>({v:o.name, l:shown(o)}));
+      // one running-tab row can cover two plan sessions (4 × 8 min or 3 × 10 min): keep them apart
+      const dup=s.opts.filter(o=>s.opts.filter(x=>x.l===o.l).length>1);
+      dup.forEach(o=>{ if(o.l!==o.v) o.l=`${o.l} (${o.v})`; });
       const pick=P.swaps[key]; if(!pick||pick===s.autoBase) return;
       const alt=opts.find(o=>o.name===pick); if(!alt) return;
       const f=s.scaleF&&s.scaleF<1?s.scaleF:1;
@@ -1048,8 +1072,8 @@ ol.ex span.d{display:block;color:var(--muted)}
         const hrs=hr[s.hr]?hr[s.hr]():'';
         const cur=s.base||s.name;
         const title = s.opts&&s.opts.length>1
-          ? `<select class="swap" data-date="${ymd(date)}" data-auto="${esc(s.autoBase)}" aria-label="Session on ${fmtDay(date)}">${s.opts.map(o=>`<option value="${esc(o)}"${o===cur?' selected':''}>${esc(o)}${o===s.autoBase?' (plan)':''}</option>`).join('')}</select>${s.name!==cur?` <span class="hint">shortened to ${esc(s.name)} this week</span>`:''}`
-          : `<b>${esc(s.name)}</b>`;
+          ? `<select class="swap" data-date="${ymd(date)}" data-auto="${esc(s.autoBase)}" aria-label="Session on ${fmtDay(date)}">${s.opts.map(o=>`<option value="${esc(o.v)}"${o.v===cur?' selected':''}>${esc(o.l)}${o.v===s.autoBase?' (plan)':''}</option>`).join('')}</select>${s.name!==cur?` <span class="hint">shortened to ${esc(shown(s))} this week</span>`:''}`
+          : `<b>${esc(shown(s))}</b>`;
         h+=`<div class="pday${s.kind==='race'?' race':''}${s.swapped?' swapped':''}"><span class="pd">${fmtDay(date)}</span><div><span class="ptype" style="--dot:var(${typeOf(s)[1]})">${typeOf(s)[0]}</span>${title} <span class="hint">· ${km} km</span>
           <div class="hint">${planWork(s)?`<b>${Math.round(planWork(s)/60)} min work</b> · `:''}${pace}${hrs?` · HR ${hrs}`:''}${s.note?` · ${esc(s.note)}`:''}</div>
           ${s.kind!=='easy'&&s.kind!=='long'?`<details class="wtxt"><summary>Workout text</summary><pre>${esc(workoutText(s))}</pre></details>`:''}</div></div>`;
@@ -1068,7 +1092,7 @@ ol.ex span.d{display:block;color:var(--muted)}
     const L=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Run2Plan//Training plan//EN','CALSCALE:GREGORIAN',`X-WR-CALNAME:Run2Plan ${RNAME[PLAN.dist]}`];
     for(const wk of PLAN.weeks) wk.days.forEach((s,d)=>{
       if(!s) return; const date=addD(wk.start,d), km=sessKm(s);
-      const ty=typeOf(s)[0], title=(/^(Easy|Long run|Race)/.test(ty) ? s.name : `${ty}: ${s.name}`)+` (${km} km)`;
+      const ty=typeOf(s)[0], title=(/^(Easy|Long run|Race)/.test(ty) ? shown(s) : `${ty}: ${shown(s)}`)+` (${km} km)`;
       const desc=`${workoutText(s)}\n\nWeek ${wk.w+1}, ${wk.phase}. Run2Plan`;
       L.push('BEGIN:VEVENT',`UID:run2plan-${PLAN.dist}-${ymd(PLAN.race)}-${c(date)}`,`DTSTAMP:${stamp}`,`DTSTART;VALUE=DATE:${c(date)}`,`DTEND;VALUE=DATE:${c(addD(date,1))}`,`SUMMARY:${icsEsc(title)}`,`DESCRIPTION:${icsEsc(desc)}`,'TRANSP:TRANSPARENT','END:VEVENT');
     });
