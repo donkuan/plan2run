@@ -511,6 +511,18 @@ ol.ex span.d{display:block;color:var(--muted)}
     none: () => ''
   };
 
+  // Almgren-inspired marathon long runs, as % of threshold speed (Intervals.icu style): [km, low %, high %, part]
+  // 'Work' = 85% of threshold or faster (counts as quality work), 'Steady' = the slower opening blocks
+  const ALM = [
+    {name:'Almgren progression: 7 km easy, 4 × 4 km 86→98%', segs:[[7,73,77,'Easy'],[4,86,88,'Work'],[4,89,91,'Work'],[4,92,94,'Work'],[4,96,98,'Work'],[2,71,76,'Easy']]},
+    {name:'Almgren 26 km progression: 4 × 6.5 km 80→99%', segs:[[6.5,80,82,'Steady'],[6.5,88,90,'Work'],[6.5,93,95,'Work'],[6.5,97,99,'Work']]},
+    {name:'Almgren 8 km easy, 7 × (1 km on / 1 km float)', segs:[[8,73,77,'Easy'],...Array.from({length:7},()=>[[1,93,95,'Work'],[1,84,86,'Float']]).flat(),[2,71,76,'Easy']]},
+    {name:'Almgren 24.5 km progression: 7 × 3.5 km 77→99%', segs:[[3.5,77,79,'Steady'],[3.5,80,82,'Steady'],[3.5,83,85,'Steady'],[3.5,86,88,'Work'],[3.5,89,91,'Work'],[3.5,92,94,'Work'],[3.5,97,99,'Work']]}
+  ];
+  const almPace = (lo,hi) => [T/(hi/100), T/(lo/100)];
+  const almKm = a => a.segs.reduce((x,s)=>x+s[0],0);
+  const almWork = a => a.segs.filter(s=>s[3]==='Work').reduce((x,s)=>x+s[0]*midP(almPace(s[1],s[2])),0);
+  const almRange = a => { const w=a.segs.filter(s=>s[3]==='Work'||s[3]==='Steady'); return [Math.min(...w.map(s=>T/(s[2]/100))), Math.max(...w.map(s=>T/(s[1]/100)))]; };
   // ---- Workout catalogue ----
   // p: function -> [fast, slow] s/km ; extra: secondary pace line
   // k:'t' (rep given in seconds) or 'd' (rep given in metres), v: rep size (number or [lo,hi]); reps/pre/post build the name;
@@ -565,7 +577,8 @@ ol.ex span.d{display:block;color:var(--muted)}
       {n:'2 × 8 km at marathon pace', keep:true, pl:'MP', k:'d', v:8000, reps:'2', post:' at marathon pace', rest:'1 km float', p:()=>[R(M)-2,R(M)+3], extra:{l:'Float', p:()=>[R(M)+15,R(M)+25]}, hr:'mp', note:'Inside a 22-25 km run.'},
       {n:'12–16 km alternating 1 km MP / 1 km float', work:r=>[[6*(r[0]+r[1])/2,8*(r[0]+r[1])/2]],  pl:'MP', len:240, rest:'continuous', p:()=>[R(M)-2,R(M)+3], extra:{l:'Float', p:()=>[R(M)+15,R(M)+25]}, hr:'mp', note:'Teaches clearing lactate at pace.'},
       {n:'32 km progressive', work:()=>null,  pl:'easy → MP', len:7000, rest:'none', p:()=>[R(M),E[1]], hr:'mp', note:'Easy down to marathon pace. Final long run, 3-4 weeks out.'},
-      {n:'3 × 17 min', pl:'MP', k:'t', v:1020, reps:'3', rest:'2.5 min jog', p:()=>[R(M)-2,R(M)+5], hr:'mp', note:'Mid-week marathon session.'}
+      {n:'3 × 17 min', pl:'MP', k:'t', v:1020, reps:'3', rest:'2.5 min jog', p:()=>[R(M)-2,R(M)+5], hr:'mp', note:'Mid-week marathon session.'},
+      ...ALM.map((a,i)=>({n:a.name, pl:i===2?'93–95% of threshold, floats 84–86%':'progressive, % of threshold pace', len:[4200,6200,1600,5400][i], rest:i===2?'1 km float':'continuous', p:()=>almRange(a), extra:{l:'Easy', p:()=>almPace(71,77)}, hr:'mp', work:()=>[[almWork(a),almWork(a)]], note:`${almKm(a)} km in total. Paces are % of your threshold pace, as in Intervals.icu; each step gets faster. ${i===2?'Floats stay steady, not jogging.':'Finish the last block close to threshold, not above it.'}`}))
     ]},
     {id:'sup', name:'Support work', color:'--c-sup', when:'Short additions that build the durability your quads lacked in The Hague.', items:[
       {n:'Strides 6–8 × 20 s', nreps:'6–8',  pl:'1500 m pace', k:'t', v:20, pre:'Strides 6–8 × ', rest:'walk back', p:()=>[R(1500)-5,R(1500)+5], hr:'none', note:'Relaxed and fast, 1-2 × a week after easy runs.'},
@@ -764,7 +777,8 @@ ol.ex span.d{display:block;color:var(--muted)}
         {kind:'seg',name:'Long run with 3 × 5 km at MP',segs:[[5000,E0,'Easy'],[5000,[mp-2,mp+3],'MP'],[1000,E0,'Float'],[5000,[mp-2,mp+3],'MP'],[1000,E0,'Float'],[5000,[mp-2,mp+3],'MP'],[4000,E0,'Easy']],lab:'MP',hr:'mp'},
         {kind:'seg',name:'Long run, last 12 km at MP',segs:[[16000,E0,'Easy'],[12000,[mp-2,mp+3],'MP']],lab:'MP',hr:'mp'},
         {kind:'seg',name:'Long run with 2 × 8 km at MP',segs:[[5000,E0,'Easy'],[8000,[mp-2,mp+3],'MP'],[1000,E0,'Float'],[8000,[mp-2,mp+3],'MP'],[3000,E0,'Easy']],lab:'MP',hr:'mp'},
-        {kind:'seg',name:'Long run, last 14 km at MP',segs:[[16000,E0,'Easy'],[14000,[mp-2,mp+3],'MP']],lab:'MP',hr:'mp'}
+        {kind:'seg',name:'Long run, last 14 km at MP',segs:[[16000,E0,'Easy'],[14000,[mp-2,mp+3],'MP']],lab:'MP',hr:'mp'},
+        ...ALM.map(a=>({kind:'seg',name:a.name,segs:a.segs.map(([km,lo,hi,lab])=>[km*1000,almPace(lo,hi),lab]),lab:'% of threshold pace',hr:'mp'}))
       ]
     };
     // categories decide which sessions can replace each other in the plan
@@ -1003,7 +1017,7 @@ ol.ex span.d{display:block;color:var(--muted)}
   function planWork(s){
     if(!s) return 0;
     if(s.kind==='iv') return s.reps*(s.size.t ?? s.size.d*midP(s.pace)/1000);
-    if(s.kind==='seg') return s.segs.filter(x=>x[2]==='MP').reduce((a,[m,p])=>a+m*midP(p)/1000,0);
+    if(s.kind==='seg') return s.segs.filter(x=>x[2]==='MP'||x[2]==='Work').reduce((a,[m,p])=>a+m*midP(p)/1000,0);
     if(s.kind==='blk') return s.steps.filter(x=>x.cue==='SubT').reduce((a,x)=>a+x.t,0);
     return 0;
   }
