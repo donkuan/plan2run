@@ -90,6 +90,10 @@ input[type=date]::-webkit-date-and-time-value{text-align:left}
 .restpick button.lock{opacity:.45;cursor:not-allowed}
 .pwarn{color:var(--c-vo2);font-size:13.5px;margin:0 0 10px}
 .pact{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:14px}
+.rowctl{width:30px;padding-right:0}
+.rowdel{font:inherit;font-size:16px;line-height:1;width:26px;height:26px;border-radius:6px;border:1px solid var(--line);background:var(--card);color:var(--c-vo2);cursor:pointer}
+.rowadd{display:flex;flex-wrap:wrap;gap:8px;padding:8px 4px 6px}
+select.rowpace{width:auto;font-size:13px;padding:4px 6px;margin-bottom:2px}
 .chip:disabled{opacity:.5;cursor:default}
 .pinfo{margin-top:12px}.pinfo summary{cursor:pointer;font-weight:600}.pinfo p{margin:8px 0 0;max-width:75ch}
 .vbars{display:flex;align-items:flex-end;gap:3px;height:110px;padding-top:14px}
@@ -418,7 +422,7 @@ ol.ex span.d{display:block;color:var(--muted)}
     </section>
   </div>
 </div>
-<script type="application/json" id="wpl-edits">{"i.vo2.Hill reps: 2 × 12 × 35 s.note":"Almgren X-session: 1500 m race effort for 35 s uphill. On the hill that effort comes out around your 10K pace, so that is the pace shown; let the effort lead if the gradient differs. Much harder than threshold (lactate 10–12 for him, about 3× LT2). Tired afterwards but not spent. Go by effort, not HR: on 35 s reps HR lags behind."}</script>
+<script type="application/json" id="wpl-edits">{"i.vo2.Hill reps: 2 × 12 × 35 s.note":"Almgren X-session: 1500 m race effort for 35 s uphill. On the hill that effort comes out around your 10K pace, so that is the pace shown; let the effort lead if the gradient differs. Much harder than threshold (lactate 10–12 for him, about 3× LT2). Tired afterwards but not spent. Go by effort, not HR: on 35 s reps HR lags behind.","i.mar.Almgren progression: 7 km easy, 4 × 4 km 86→98%.n":"25k progression 4 × 4 km 86→98%","i.mar.Almgren progression: 7 km easy, 4 × 4 km 86→98%.note":"Almgren. 25 km in total. Paces are % of your threshold pace, as in Intervals.icu; each step gets faster. Finish the last block close to threshold, not above it.","i.mar.Almgren 24.5 km progression: 7 × 3.5 km 77→99%.note":"Almgren. 24.5 km in total. Paces are % of your threshold pace, as in Intervals.icu; each step gets faster. Finish the last block close to threshold, not above it.","i.mar.Almgren 26 km progression: 4 × 6.5 km 80→99%.note":"Almgren. 26 km in total. Paces are % of your threshold pace, as in Intervals.icu; each step gets faster. Finish the last block close to threshold, not above it.","i.mar.Almgren 26 km progression: 4 × 6.5 km 80→99%.n":"26 km progression: 4 × 6.5 km 80→99%","i.mar.Almgren 24.5 km progression: 7 × 3.5 km 77→99%.n":"24.5 km slow ramp: 7 × 3.5 km 77→99%","i.mar.Almgren 8 km easy, 7 × (1 km on / 1 km float).n":"24k alternating 1 km floats","i.mar.Almgren 8 km easy, 7 × (1 km on / 1 km float).note":"Almgren. 24 km in total. Paces are % of your threshold pace, as in Intervals.icu; each step gets faster. Floats stay steady, not jogging.","i.mar.2 × 8 km at marathon pace.n":"","i.mar.28–30 km, last 12–16 km at marathon pace.n":"","i.mar.30 km with 3 × 5 km at marathon pace.n":""}</script>
 <script>
 (function(){
   // ---- Page source, captured before anything renders: saving an edit rebuilds the document from this, never from the live DOM ----
@@ -439,7 +443,8 @@ ol.ex span.d{display:block;color:var(--muted)}
   })();
   let EDITS = {};
   try { EDITS = JSON.parse((document.getElementById('wpl-edits') || {}).textContent || '{}') || {}; } catch(e) {}
-  let DRAFT = Object.assign({}, EDITS);
+  const clone = o => JSON.parse(JSON.stringify(o));
+  let DRAFT = clone(EDITS);
   const DEF = {};
   const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   // text with saved edits applied; records the default so unchanged text is never stored
@@ -1139,22 +1144,58 @@ ol.ex span.d{display:block;color:var(--muted)}
     const WA=workAdj(), ADJ = WA&&WA.active ? WA.f : ID;
     $('cats').innerHTML=CATS.filter(c=>S.filter==='all'||S.filter===c.id).map(c=>{
       const racep = c.race ? ` <span class="tag">race pace ${mmss(u(R(c.race)))}${uLbl()}${PA?` · ${mmss(u(PA(R(c.race))))}${uLbl()} in race conditions`:''}</span>` : '';
-      const rows=c.items.map((w,i)=>({w,i,r:w.p?w.p().map(ADJ):null})).map(o=>(o.s=repSec(o.w,o.r),o)).sort((a,b)=>a.s-b.s||a.i-b.i).map(({w,r})=>{
+      // deleted rows (or rows whose name you emptied) are hidden; your own added rows come last
+      const hid=new Set(DRAFT._hidden||[]);
+      const isGone=w=>{ const k=`i.${c.id}.${w.n}.`; const nm=DRAFT[k+'n']; return hid.has(k) || (nm!=null && nm.trim()===''); };
+      const nHidden=c.items.filter(isGone).length;
+      const own=((DRAFT._added||{})[c.id]||[]).map(a=>({n:'New session', own:a, rest:'', note:'', pl:PACE_OPTS[a.pace]?`${PACE_OPTS[a.pace]}${a.pace==='E'||a.pace==='T'?'':' pace'}`:'', p: a.pace ? ()=>paceOf(a.pace) : undefined, effort:'', hr: a.pace==='E'?'easy':'none', len:Infinity}));
+      const items=[...c.items.filter(w=>!isGone(w)), ...own];
+      const rows=items.map((w,i)=>({w,i,r:w.p?w.p().map(ADJ):null})).map(o=>(o.s=repSec(o.w,o.r),o)).sort((a,b)=>a.s-b.s||a.i-b.i).map(({w,r})=>{
         let pace='', rep=perRep(w,r);
         if(w.p){ pace=`${rng(r[0],r[1])}<small>${uLbl()}</small>`+(w.pl?`<small class="pl">${w.pl}</small>`:'');
           if(w.extra){ const x0=w.extra.p(), x=x0&&x0.map(ADJ); pace+= x ? `<small>${w.extra.l} ${rng(x[0],x[1])}</small>` : `<small>${w.extra.l} ${Math.round(45000/Math.max(r[0],r[1]))}–${Math.round(45000/Math.min(r[0],r[1]))} m</small>`; } }
-        const b=`i.${c.id}.${w.n}.`;
-        if(!w.p) pace=`<span style="font-family:var(--body);font-weight:600" ${ek(b+'effort')}>${tx(b+'effort',w.effort)}</span>`;
-        return `<tr><td class="wname" ${ek(b+'n')}>${tx(b+'n',repName(w,r))}</td><td ${ek(b+'rest')}>${tx(b+'rest',w.rest)}</td><td class="p">${pace}</td><td class="p">${rep}</td><td class="p">${fmtWork(workRange(w,r))}</td><td>${hr[w.hr]()}</td><td class="note" ${ek(b+'note')}>${tx(b+'note',w.note)}</td></tr>`;
+        const b = w.own ? `a.${c.id}.${w.own.id}.` : `i.${c.id}.${w.n}.`;
+        if(w.own && EDITING) pace=`<select class="rowpace" data-cat="${c.id}" data-id="${w.own.id}">${PACE_LIST.map(([v,l])=>`<option value="${v}"${v===w.own.pace?' selected':''}>${l}</option>`).join('')}</select>`+(w.p?`<small>${rng(r[0],r[1])}${uLbl()}</small>`:'');
+        else if(!w.p) pace=`<span style="font-family:var(--body);font-weight:600" ${ek(b+'effort')}>${tx(b+'effort',w.effort)}</span>`;
+        const del = EDITING ? `<td class="rowctl"><button type="button" class="rowdel" data-cat="${c.id}" data-key="${esc(b)}" title="Delete this session" aria-label="Delete this session">×</button></td>` : '';
+        return `<tr>${del}<td class="wname" ${ek(b+'n')}>${tx(b+'n',w.own?'New session':repName(w,r))}</td><td ${ek(b+'rest')}>${tx(b+'rest',w.rest)}</td><td class="p">${pace}</td><td class="p">${rep}</td><td class="p">${fmtWork(workRange(w,r))}</td><td>${hr[w.hr]()}</td><td class="note" ${ek(b+'note')}>${tx(b+'note',w.note)}</td></tr>`;
       }).join('');
       return `<section class="cat" style="--dot:var(${c.color})"><div class="cathead"><h2 ${ek(`c.${c.id}.name`)}>${tx(`c.${c.id}.name`,c.name)}</h2>${racep}<p ${ek(`c.${c.id}.when`)}>${tx(`c.${c.id}.when`,c.when)}</p></div>
-        <div class="panel scroll" style="padding:4px 8px"><table><thead><tr><th>Session</th><th>Recovery</th><th>Pace</th><th>${S.rep==='time'?'Rep distance':'Rep time'}</th><th>Work</th><th>HR</th><th>Notes</th></tr></thead><tbody>${rows}</tbody></table></div></section>`;
+        <div class="panel scroll" style="padding:4px 8px"><table><thead><tr>${EDITING?'<th></th>':''}<th>Session</th><th>Recovery</th><th>Pace</th><th>${S.rep==='time'?'Rep distance':'Rep time'}</th><th>Work</th><th>HR</th><th>Notes</th></tr></thead><tbody>${rows}</tbody></table>${EDITING?`<div class="rowadd"><button type="button" class="chip" data-add="${c.id}">+ Add session</button>${nHidden?`<button type="button" class="chip" data-restore="${c.id}">Restore ${nHidden} deleted</button>`:''}</div>`:''}</div></section>`;
     }).join('');
     condSummaries();
     renderPlan();
     if(EDITING) setEditable(true);
     save();
   }
+
+  // pace choices for sessions you add yourself
+  // (array keeps the order: object keys that look like numbers would be sorted first)
+  const PACE_LIST=[['','No pace'],['1500','1500 m'],['3000','3K'],['5000','5K'],['10000','10K'],['15000','15K'],['T','Threshold (T)'],['21097.5','Half marathon'],['30000','25–30K'],['42195','Marathon'],['E','Easy']];
+  const PACE_OPTS=Object.fromEntries(PACE_LIST);
+  const paceOf = v => v==='T' ? [T,T+5] : v==='E' ? E : v==='30000' ? [R(25000),R(30000)] : [R(+v),R(+v)+3];
+  $('cats').addEventListener('click',e=>{
+    if(!EDITING) return;
+    const del=e.target.closest('.rowdel'), add=e.target.closest('[data-add]'), res=e.target.closest('[data-restore]');
+    if(del){
+      const key=del.dataset.key, cat=del.dataset.cat;
+      if(key.startsWith('a.')){ const id=key.split('.')[2]; DRAFT._added[cat]=(DRAFT._added[cat]||[]).filter(a=>a.id!==id); Object.keys(DRAFT).filter(k=>k.startsWith(key)).forEach(k=>delete DRAFT[k]); }
+      else { DRAFT._hidden=[...new Set([...(DRAFT._hidden||[]), key])]; }
+      render();
+    } else if(add){
+      const cat=add.dataset.add; DRAFT._added=DRAFT._added||{}; (DRAFT._added[cat]=DRAFT._added[cat]||[]).push({id:Date.now().toString(36), pace:''}); render();
+      const rows=document.querySelectorAll(`#cats [data-ek^="a.${cat}."].wname`); const last=rows[rows.length-1]; if(last){ last.focus(); document.getSelection().selectAllChildren(last); }
+    } else if(res){
+      const cat=res.dataset.restore;
+      DRAFT._hidden=(DRAFT._hidden||[]).filter(k=>!k.startsWith(`i.${cat}.`));
+      Object.keys(DRAFT).filter(k=>k.startsWith(`i.${cat}.`)&&k.endsWith('.n')&&String(DRAFT[k]).trim()==='').forEach(k=>delete DRAFT[k]);
+      render();
+    }
+  });
+  $('cats').addEventListener('change',e=>{
+    const sel=e.target.closest('select.rowpace'); if(!sel||!EDITING) return;
+    const a=(DRAFT._added[sel.dataset.cat]||[]).find(x=>x.id===sel.dataset.id); if(a){ a.pace=sel.value; render(); }
+  });
 
   // ---- In-place text editing, saved as a new version of the page ----
   let EDITING=false, ART=null, ORIG=[];
@@ -1180,13 +1221,13 @@ ol.ex span.d{display:block;color:var(--muted)}
     $('editMsg').textContent = msg ?? (on ? 'Click any text to change it. Paces, times and HR are calculated, so they stay as they are.' : '');
   }
   function startEdit(){
-    EDITING=true; ORIG=staticEls(document.querySelector('.wrap')).map(el=>el.innerHTML);
+    EDITING=true; ORIG=staticEls(document.querySelector('.wrap')).map(el=>el.innerHTML); render();
     setEditable(true); editUI(true);
   }
   function stopEdit(){
     EDITING=false; setEditable(false);
     staticEls(document.querySelector('.wrap')).forEach((el,i)=>{ if(ORIG[i]!==undefined) el.innerHTML=ORIG[i]; });
-    DRAFT=Object.assign({},EDITS); render(); editUI(false);
+    DRAFT=clone(EDITS); render(); editUI(false);
   }
   document.addEventListener('input', e=>{
     const el=e.target.closest && e.target.closest('[data-ek]');
