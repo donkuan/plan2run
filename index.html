@@ -589,7 +589,7 @@ ol.ex span.d{display:block;color:var(--muted)}
     const one = o => {
       const vs = arr(o.v); let s;
       if(native || !p) s = fmtSet(vs, w.k==='t' ? natDur : natDist);
-      else s = '≈' + (w.k==='t' ? fmtSet(vs.map(x=>x/p*1000), rndDist) : fmtSet(vs.map(x=>x*p/1000), rndDur));
+      else s = (w.k==='t' ? fmtSet(vs.map(x=>x/p*1000), rndDist) : fmtSet(vs.map(x=>x*p/1000), rndDur));
       return (o.pre ?? (o.reps ? o.reps+' × ' : '')) + s + (o.post || '');
     };
     return one(w) + (w.or ? ' or ' + one({reps:w.or.reps, v:w.or.v, post:w.post}) : '');
