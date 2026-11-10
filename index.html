@@ -106,6 +106,8 @@ input[type=date]::-webkit-date-and-time-value{text-align:left}
 .pday .pd{color:var(--muted);font-size:13.5px;white-space:nowrap}
 .pday.rest{color:var(--muted)}
 .pday.race b{color:var(--c-vo2)}
+select.swap{width:auto;max-width:100%;font-weight:700;padding:4px 8px;font-size:14.5px}
+.pday.swapped select.swap{border-color:var(--accent)}
 .wtxt summary{cursor:pointer;font-size:13px;color:var(--accent)}
 .wtxt pre{font-family:var(--mono);font-size:12px;background:var(--soft);border-radius:6px;padding:8px 10px;margin:6px 0 0;white-space:pre-wrap;user-select:all}
 td.cpc{color:var(--c-vo2)}
@@ -707,6 +709,7 @@ ol.ex span.d{display:block;color:var(--muted)}
   const fmtDay = d => `${DAYS[(d.getDay()+6)%7]} ${d.getDate()} ${d.toLocaleDateString('en-GB',{month:'short'})}`;
   const today0 = () => { const n=new Date(); return new Date(n.getFullYear(),n.getMonth(),n.getDate()); };
   S.plan=Object.assign({dist:'42195', race:'', start:'', runs:'5', cur:'50', peak:'80', sub:'3', long:'6', qdays:'1,3,5', rest:''}, S.plan||{});
+  if(!S.plan.swaps||typeof S.plan.swaps!=='object') S.plan.swaps={};
   if(!parseYmd(S.plan.start)) S.plan.start=ymd(addD(monday(today0()),7));
   if(!parseYmd(S.plan.race)) S.plan.race=ymd(addD(parseYmd(S.plan.start),7*15+6));
   const RNAME={'5000':'5K','10000':'10K','21097.5':'Half marathon','42195':'Marathon'};
@@ -716,7 +719,7 @@ ol.ex span.d{display:block;color:var(--muted)}
   function templates(){
     const mp=R(M), E0=E;
     const iv=(name,reps,size,rec,pace,lab,hr,o={})=>({kind:'iv',name,reps,size,rec,pace,lab,hr,...o});
-    return {
+    const t = {
       subShort:[
         iv('25 × 400 m',25,{d:400},{t:30,stand:true},[R(10000),R(10000)+3],'10K pace','subS'),
         iv('10 × 3 min',10,{t:180},{t:60},[R(15000),R(HM)],'15K–HM pace','subS'),
@@ -750,6 +753,18 @@ ol.ex span.d{display:block;color:var(--muted)}
         {kind:'seg',name:'Long run, last 14 km at MP',segs:[[16000,E0,'Easy'],[14000,[mp-2,mp+3],'MP']],lab:'MP',hr:'mp'}
       ]
     };
+    // categories decide which sessions can replace each other in the plan
+    const tag=(arr,cat)=>arr.forEach(x=>{ x.cat=cat; x.base=x.name; });
+    tag(t.subShort,'subt'); tag(t.subLong,'subt'); tag([t.subMP],'subt'); tag(t.vo2,'vo2'); tag(t.race[dist0()],'race'); tag(t.mlong,'mlong');
+    return t;
+  }
+  const dist0 = () => S.plan.dist;
+  function catOptions(t,cat){
+    if(cat==='subt') return [...t.subShort, ...t.subLong, t.subMP];
+    if(cat==='vo2') return t.vo2;
+    if(cat==='race') return t.race[dist0()];
+    if(cat==='mlong') return t.mlong;
+    return [];
   }
   const midP = p => (p[0]+p[1])/2;
   // Your race-week sessions: % of threshold speed (95% = slightly slower than threshold pace)
@@ -775,7 +790,7 @@ ol.ex span.d{display:block;color:var(--muted)}
     if(s.kind==='blk') return r05(s.steps.reduce((a,x)=>a+x.t/midP(x.pace),0));
     return s.km||0;
   }
-  const scaleReps = (s,f) => { const n=Math.max(2,Math.round(s.reps*f)); return {...s, reps:n, name:s.name.replace(/^\d+/, String(n))}; };
+  const scaleReps = (s,f) => { const n=Math.max(2,Math.round(s.reps*f)); return {...s, reps:n, name:s.name.replace(/^\d+/, String(n)), base:s.base||s.name, scaleF:f}; };
   const easy = (km, extra) => ({kind:'easy', name: extra ? `Easy run + ${extra}` : 'Easy run', km:r05(km), pace:E, lab:'easy pace', hr:'easy', strides: !!extra});
 
   function buildPlan(){
@@ -838,7 +853,6 @@ ol.ex span.d{display:block;color:var(--muted)}
       } else if(phase==='Specific'){
         Q.push(specK%2===0 ? T_.subShort[specK%3] : T_.subLong[specK%3]);
         Q.push(T_.race[dist][(isM?specK+1:specK)%T_.race[dist].length]);
-        Q.push(T_.subLong[(specK+1)%3]);
       } else {
         Q.push(scaleReps(T_.subShort[1],0.6));
         Q.push(T_.sharpen[dist]);
@@ -849,7 +863,16 @@ ol.ex span.d{display:block;color:var(--muted)}
         const f=Math.min(1, vol[w]*(phase==='Specific'?0.35:0.3)/work);
         if(f<1) for(let i=0;i<used.length;i++) Q[i]=scaleReps(Q[i], Math.max(0.6,f));
       }
-      q.forEach((d,i)=>{ if(Q[i]) days[d]={...Q[i]}; });
+      // specific phase with a hard long run (marathon, half): rest the day after, easy the day after that,
+      // then the two quality days, keeping the day before the long run free of quality
+      let qDays=q; const forceRest=new Set(); let mustEasy=null;
+      if(phase==='Specific' && (isM||isHM)){
+        const r1=(longDay+1)%7, e1=(longDay+2)%7, free=d=>!restSet.has(d)&&d!==r1&&d!==e1&&d!==longDay&&d!==(longDay+6)%7;
+        const cand=[(longDay+3)%7,(longDay+5)%7,(longDay+4)%7].filter(free);
+        qDays=[cand[0], cand.find(d=>d!==cand[0]&&Math.abs(d-cand[0])!==1)??cand[1]].filter(d=>d!=null);
+        forceRest.add(r1); mustEasy=restSet.has(e1)?null:e1;
+      } else if(phase==='Specific') qDays=q.slice(0,2);
+      qDays.forEach((d,i)=>{ if(Q[i]) days[d]={...Q[i]}; });
       // long run
       let L;
       const longKm=Math.min(capL, Math.max(10, r05(vol[w]*(isM?0.3:0.27))));
@@ -862,7 +885,7 @@ ol.ex span.d{display:block;color:var(--muted)}
       days[longDay]=L;
       // easy days
       const nEasy=Math.max(0, runs - days.filter(Boolean).length);
-      const pref=[2,0,4,6,5,1,3].filter(d=>!days[d] && !restSet.has(d));
+      const pref=[...(mustEasy!=null&&!days[mustEasy]?[mustEasy]:[]), ...[2,0,4,6,5,1,3].filter(d=>!days[d] && !restSet.has(d) && !forceRest.has(d) && d!==mustEasy)];
       const easyDays=pref.slice(0,nEasy).sort((a,b)=>a-b);
       const used=days.filter(Boolean).reduce((a,s)=>a+sessKm(s),0);
       const ek=nEasy? Math.min(16, Math.max(5, (vol[w]-used)/nEasy)) : 0;
@@ -895,6 +918,15 @@ ol.ex span.d{display:block;color:var(--muted)}
     // nothing hard in the 7 days before the race apart from these two
     for(let off=7; off<=9; off++){ const t=at(off); if(t){ const [wk,d]=t; if(wk.days[d]&&wk.days[d].kind==='iv'&&off===7) wk.days[d]=easy(8); } }
     for(let off=1; off<=5; off++){ const t=at(off); if(t){ const [wk,d]=t, x=wk.days[d]; if(x&&x.kind==='easy'&&x.km>8) wk.days[d]=easy(8, x.strides?'4 strides':null); } }
+    // sessions you swapped (same category only)
+    for(const wk of weeks) wk.days.forEach((s,d)=>{
+      if(!s||!s.cat) return;
+      const key=ymd(addD(wk.start,d)), opts=catOptions(T_,s.cat); s.autoBase=s.base||s.name; s.opts=opts.map(o=>o.name);
+      const pick=P.swaps[key]; if(!pick||pick===s.autoBase) return;
+      const alt=opts.find(o=>o.name===pick); if(!alt) return;
+      const f=s.scaleF&&s.scaleF<1?s.scaleF:1;
+      wk.days[d]={...(f<1?scaleReps(alt,f):alt), autoBase:s.autoBase, opts:s.opts, swapped:true};
+    });
     for(const wk of weeks) wk.total=Math.round(wk.days.filter(Boolean).reduce((a,s)=>a+sessKm(s),0));
     if(usedExtra) warn.push(`A quality day fell on a rest day or the long run day, so ${DAYS[qd[qd.length-1]]} is used as a quality day in some weeks.`);
     return {weeks, nW, base, trans, spec, taper, dist, race, peak, warn};
@@ -950,7 +982,11 @@ ol.ex span.d{display:block;color:var(--muted)}
         if(!s){ h+=`<div class="pday rest"><span class="pd">${fmtDay(date)}</span><span>Rest</span></div>`; return; }
         const km=sessKm(s), pace=s.pace?`${rng(s.pace[0],s.pace[1])}${uLbl()} (${s.lab})`:'';
         const hrs=hr[s.hr]?hr[s.hr]():'';
-        h+=`<div class="pday${s.kind==='race'?' race':''}"><span class="pd">${fmtDay(date)}</span><div><b>${esc(s.name)}</b> <span class="hint">· ${km} km</span>
+        const cur=s.base||s.name;
+        const title = s.opts&&s.opts.length>1
+          ? `<select class="swap" data-date="${ymd(date)}" data-auto="${esc(s.autoBase)}" aria-label="Session on ${fmtDay(date)}">${s.opts.map(o=>`<option value="${esc(o)}"${o===cur?' selected':''}>${esc(o)}${o===s.autoBase?' (plan)':''}</option>`).join('')}</select>${s.name!==cur?` <span class="hint">shortened to ${esc(s.name)} this week</span>`:''}`
+          : `<b>${esc(s.name)}</b>`;
+        h+=`<div class="pday${s.kind==='race'?' race':''}${s.swapped?' swapped':''}"><span class="pd">${fmtDay(date)}</span><div>${title} <span class="hint">· ${km} km</span>
           <div class="hint">${pace}${hrs?` · HR ${hrs}`:''}${s.note?` · ${esc(s.note)}`:''}</div>
           ${s.kind!=='easy'&&s.kind!=='long'?`<details class="wtxt"><summary>Workout text</summary><pre>${esc(workoutText(s))}</pre></details>`:''}</div></div>`;
       });
@@ -1171,6 +1207,11 @@ ol.ex span.d{display:block;color:var(--muted)}
     el.addEventListener('change',()=>{ S.plan[k]=el.value; save(); renderPlan(); });
   });
   $('pIcs').addEventListener('click',downloadIcs);
+  $('planOut').addEventListener('change',e=>{
+    const sel=e.target.closest('select.swap'); if(!sel) return;
+    if(sel.value===sel.dataset.auto) delete S.plan.swaps[sel.dataset.date]; else S.plan.swaps[sel.dataset.date]=sel.value;
+    save(); renderPlan();
+  });
   function drawRest(){
     const rs=new Set((S.plan.rest||'').split(',').filter(x=>x!=='').map(Number)), L=+S.plan.long;
     $('pRest').innerHTML=DAYS.map((n,d)=>`<button type="button" data-d="${d}" aria-pressed="${rs.has(d)&&d!==L}"${d===L?' class="lock" title="Long run day"':''}>${n}</button>`).join('');
