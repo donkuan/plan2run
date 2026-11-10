@@ -561,8 +561,8 @@ ol.ex span.d{display:block;color:var(--muted)}
     ]},
     {id:'mar', name:'Marathon-specific', color:'--c-race', race:M, when:'The long run is the key session. Every 7-10 days in the specific phase. Rehearse fuelling (a gel every 6 km) and race shoes.', items:[
       {n:'28–30 km, last 12–16 km at marathon pace', work:r=>[[12*(r[0]+r[1])/2,16*(r[0]+r[1])/2]],  pl:'MP', len:3000, rest:'none', p:()=>[R(M)-2,R(M)+3], extra:{l:'First part', p:()=>E}, hr:'mp', note:'The core session.'},
-      {n:'30 km with 3 × 5 km at marathon pace', nreps:'3',  pl:'MP', k:'d', v:5000, pre:'30 km with 3 × ', post:' at marathon pace', rest:'1 km easy between', p:()=>[R(M)-2,R(M)+3], hr:'mp', note:'Breaks the pace into pieces early in the phase.'},
-      {n:'2 × 8 km at marathon pace', pl:'MP', k:'d', v:8000, reps:'2', post:' at marathon pace', rest:'1 km float', p:()=>[R(M)-2,R(M)+3], extra:{l:'Float', p:()=>[R(M)+15,R(M)+25]}, hr:'mp', note:'Inside a 22-25 km run.'},
+      {n:'30 km with 3 × 5 km at marathon pace', nreps:'3', keep:true,  pl:'MP', k:'d', v:5000, pre:'30 km with 3 × ', post:' at marathon pace', rest:'1 km easy between', p:()=>[R(M)-2,R(M)+3], hr:'mp', note:'Breaks the pace into pieces early in the phase.'},
+      {n:'2 × 8 km at marathon pace', keep:true, pl:'MP', k:'d', v:8000, reps:'2', post:' at marathon pace', rest:'1 km float', p:()=>[R(M)-2,R(M)+3], extra:{l:'Float', p:()=>[R(M)+15,R(M)+25]}, hr:'mp', note:'Inside a 22-25 km run.'},
       {n:'12–16 km alternating 1 km MP / 1 km float', work:r=>[[6*(r[0]+r[1])/2,8*(r[0]+r[1])/2]],  pl:'MP', len:240, rest:'continuous', p:()=>[R(M)-2,R(M)+3], extra:{l:'Float', p:()=>[R(M)+15,R(M)+25]}, hr:'mp', note:'Teaches clearing lactate at pace.'},
       {n:'32 km progressive', work:()=>null,  pl:'easy → MP', len:7000, rest:'none', p:()=>[R(M),E[1]], hr:'mp', note:'Easy down to marathon pace. Final long run, 3-4 weeks out.'},
       {n:'3 × 17 min', pl:'MP', k:'t', v:1020, reps:'3', rest:'2.5 min jog', p:()=>[R(M)-2,R(M)+5], hr:'mp', note:'Mid-week marathon session.'}
