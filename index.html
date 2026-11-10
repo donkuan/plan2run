@@ -284,11 +284,11 @@ ol.ex span.d{display:block;color:var(--muted)}
     <div class="scroll"><table class="phase">
       <thead><tr><th>Phase</th><th>Weeks</th><th>Per week</th><th>Main sessions</th></tr></thead>
       <tbody>
-        <tr><td>Base</td><td>10-14</td><td>2 sub-threshold + 1 long run + strides; VO2max every 1-2 weeks</td><td>Sub-threshold menu, short VO2max, long run building to 25-28 km</td></tr>
+        <tr><td>Base</td><td>10-14</td><td>2 sub-threshold + 1 long run + strides</td><td>Sub-threshold menu, long run building to 25-28 km</td></tr>
         <tr><td>Transition</td><td>2</td><td>As base, slightly longer reps</td><td>First race-pace blocks, no killer sessions</td></tr>
         <tr><td>Specific</td><td>4</td><td>1 sub-threshold + 1 race-specific + 1 long run</td><td>The race tables; marathon: long runs with marathon pace</td></tr>
         <tr><td>Taper</td><td>1-2</td><td>Volume down 30-50%</td><td>Short race-pace pieces and strides; nothing new</td></tr>
-        <tr><td>Maintenance</td><td>any</td><td>1 quality + 1 long + 1 easy</td><td>Alternate VO2max and sub-threshold weekly; hikes replace long runs</td></tr>
+        <tr><td>Maintenance</td><td>any</td><td>1 quality + 1 long + 1 easy</td><td>Sub-threshold; hikes replace long runs</td></tr>
       </tbody>
     </table></div>
   </section>
@@ -531,7 +531,7 @@ ol.ex span.d{display:block;color:var(--muted)}
       {n:'2 × 20 min', pl:'threshold (T) pace', k:'t', v:1200, reps:'2', rest:'3 min jog', p:()=>[T+5,T+10], hr:'thr', note:''},
       {n:'45/15s, Bakken', pl:'start at 10–15K pace', k:'t', v:45, keep:true, rest:'15 s standing, walking or light jog', p:()=>[R(10000),R(15000)], extra:{l:'Progress to', p:()=>[R(3000),R(5000)]}, hr:'b45', note:'15–30 × 45 s on. From his book: start at 10–15K pace and progress toward 3–5K pace (e.g. a little faster each rep, or in groups of 5). Build volume over 8 weeks: 15, 20, 25, then 30 reps or 2 × 15 with 1–2 min between. Count it as your threshold session that week, not as an extra sub-threshold day.'}
     ]},
-    {id:'vo2', name:'VO2max', color:'--c-vo2', when:'Every 1-2 weeks in base, weekly in a 5K or 10K block. Recoveries long enough to hit the pace again; stop when form breaks.', items:[
+    {id:'vo2', name:'VO2max', color:'--c-vo2', when:'Only as race-specific work for a 5K, in the final weeks. Not needed for 10K to marathon: sub-threshold and race-pace work cover it (Steve Magness: VO2max is not the limiter, specific endurance is). Recoveries long enough to hit the pace again; stop when form breaks.', items:[
       {n:'5 × 3 min', pl:'3K–5K pace', k:'t', v:180, reps:'5', rest:'2–3 min jog', p:()=>[R(3000),R(5000)], hr:'vo2', note:'The classic, at 3K-5K effort.'},
       {n:'6 × 1000 m', pl:'5K pace', k:'d', v:1000, reps:'6', rest:'2 min jog', p:()=>[R(5000)-3,R(5000)], hr:'vo2', note:''},
       {n:'12–20 × 30 s on / 30 s off', pl:'1500 m–3K pace', k:'t', v:30, reps:'12–20', post:' on / 30 s off', rest:'30 s float', p:()=>[R(1500),R(3000)], extra:{l:'Float', p:()=>[E[0]-15,E[0]+15]}, hr:'vo2', note:'Lots of time near VO2max with little stress per rep.'},
@@ -737,7 +737,7 @@ ol.ex span.d{display:block;color:var(--muted)}
         iv('6 × 1000 m',6,{d:1000},{t:120},[R(5000)-3,R(5000)],'5K pace','vo2'),
         iv('20 × 400 m',20,{d:400},{t:60,stand:true},[R(5000),R(5000)+2],'5K pace','vo2')],
       race:{
-        '5000':[iv('20 × 400 m',20,{d:400},{t:60,stand:true},[R(5000)-1,R(5000)+1],'5K pace','race'), iv('5 × 1000 m',5,{d:1000},{t:120},[R(5000)-3,R(5000)],'5K pace','race'), iv('3 × 1600 m',3,{d:1600},{t:150},[R(5000),R(5000)+2],'5K pace','race')],
+        '5000':[iv('20 × 400 m',20,{d:400},{t:60,stand:true},[R(5000)-1,R(5000)+1],'5K pace','race'), iv('5 × 1000 m',5,{d:1000},{t:120},[R(5000)-3,R(5000)],'5K pace','race'), iv('3 × 1600 m',3,{d:1600},{t:150},[R(5000),R(5000)+2],'5K pace','race'), iv('6 × 1000 m',6,{d:1000},{t:120},[R(5000)-3,R(5000)],'5K pace','vo2'), iv('5 × 3 min',5,{t:180},{t:150},[R(3000),R(5000)],'3K–5K pace','vo2'), iv('16 × 30 s on / 30 s off',16,{t:30},{t:30,float:true},[R(1500),R(3000)],'1500 m–3K pace','vo2')],
         '10000':[iv('25 × 400 m',25,{d:400},{t:30,stand:true},[R(10000),R(10000)+2],'10K pace','race'), iv('8 × 1000 m',8,{d:1000},{t:60},[R(10000)-5,R(10000)-3],'just faster than 10K pace','race'), iv('5 × 2 km',5,{d:2000},{t:90},[R(10000)-2,R(10000)],'10K pace','race'), iv('3 × 3 km',3,{d:3000},{t:120},[R(10000),R(10000)+2],'10K pace','race')],
         '21097.5':[iv('8 × 2 km',8,{d:2000},{t:60,float:true},[R(HM)-3,R(HM)-1],'just faster than HM pace','race'), iv('4 × 4 km',4,{d:4000},{t:90},[R(HM)-3,R(HM)],'HM pace','race'), iv('3 × 5 km',3,{d:5000},{t:120},[R(HM)-1,R(HM)+1],'HM pace','race'), iv('2 × 6 km',2,{d:6000},{t:120},[R(HM),R(HM)+4],'HM pace','race')],
         '42195':[iv('3 × 17 min',3,{t:1020},{t:150},[mp-2,mp+5],'MP','mp'), iv('2 × 8 km',2,{d:8000},{d:1000,float:true},[mp-2,mp+3],'MP','mp'), iv('3 × 5 km',3,{d:5000},{d:1000,float:true},[mp-2,mp+3],'MP','mp')]
@@ -846,7 +846,7 @@ ol.ex span.d{display:block;color:var(--muted)}
       const Q=[];
       if(phase==='Base'){
         Q.push(T_.subShort[w%3]);
-        Q.push(w%2===1 ? T_.vo2[(w>>1)%4] : T_.subLong[(w>>1)%3]);
+        Q.push(T_.subLong[(w>>1)%3]);
         Q.push(T_.subLong[((w>>1)+1)%3]);
       } else if(phase==='Transition'){
         Q.push(T_.subShort[w%3]);
@@ -873,6 +873,11 @@ ol.ex span.d{display:block;color:var(--muted)}
         const cand=[(longDay+3)%7,(longDay+5)%7,(longDay+4)%7].filter(free);
         qDays=[cand[0], cand.find(d=>d!==cand[0]&&Math.abs(d-cand[0])!==1)??cand[1]].filter(d=>d!=null);
         forceRest.add(r1); mustEasy=restSet.has(e1)?null:e1;
+      } else if(phase==='Specific' && dist==='5000'){
+        const free=d=>!restSet.has(d)&&d!==longDay;
+        let K=(longDay+2)%7; if(!free(K)) K=[1,2,3,0,4].find(d=>free(d)&&free((d+1)%7)) ?? K;
+        const r1=(K+1)%7, e1=(K+2)%7, q1=[(K+3)%7,(K+4)%7].find(d=>free(d)&&d!==(longDay+6)%7) ?? (K+3)%7;
+        qDays=[q1, K]; forceRest.add(r1); mustEasy=(restSet.has(e1)||e1===longDay)?null:e1;
       } else if(phase==='Specific') qDays=q.slice(0,2);
       qDays.forEach((d,i)=>{ if(Q[i]) days[d]={...Q[i]}; });
       // long run
@@ -981,7 +986,7 @@ ol.ex span.d{display:block;color:var(--muted)}
   function weekSummary(days){
     const n={}; days.forEach(s=>{ if(!s) return; const t=typeOf(s)[0].replace(' + strides',''); n[t]=(n[t]||0)+1; });
     const order=['Sub-threshold','Taper sub-threshold','VO2max','Race-specific','Race pace','MP long run','Long run + MP','Long run','Easy','Race'];
-    return order.filter(k=>n[k]).map(k=>`${n[k]>1?n[k]+' × ':''}${k.toLowerCase().replace('vo2max','VO2max').replace(' mp',' MP')}`).join(' · ');
+    return order.filter(k=>n[k]).map(k=>`${n[k]>1?n[k]+' × ':''}${k.toLowerCase().replace('vo2max','VO2max').replace(/\bmp\b/,'MP')}`).join(' · ');
   }
   let PLAN=null;
   function renderPlan(){
