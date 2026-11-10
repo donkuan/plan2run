@@ -101,6 +101,8 @@ input[type=date]::-webkit-date-and-time-value{text-align:left}
 .wkhead{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;margin-bottom:6px}
 .wkhead b{font-family:var(--display);font-size:20px;text-transform:uppercase}
 .wkhead span{color:var(--muted);font-size:13.5px}
+.wksum{font-size:13px;color:var(--muted);margin:-2px 0 6px}
+.ptype{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--dot);margin-bottom:2px}
 .wkhead .wkkm{margin-left:auto;font-family:var(--mono);font-weight:600;color:var(--fg)}
 .pday{display:grid;grid-template-columns:92px minmax(0,1fr);gap:8px;padding:7px 0;border-top:1px solid var(--line)}
 .pday .pd{color:var(--muted);font-size:13.5px;white-space:nowrap}
@@ -962,6 +964,25 @@ ol.ex span.d{display:block;color:var(--muted)}
     return L.join('\n');
   }
 
+  // what kind of session it is: label + colour
+  function typeOf(s){
+    if(!s) return ['Rest','--muted'];
+    if(s.kind==='race') return ['Race','--c-vo2'];
+    if(s.kind==='blk') return ['Taper sub-threshold','--c-subt'];
+    if(s.kind==='easy') return [s.strides?'Easy + strides':'Easy','--c-sup'];
+    if(s.kind==='long') return ['Long run','--c-sup'];
+    if(s.cat==='mlong') return ['MP long run','--c-race'];
+    if(s.kind==='seg') return ['Long run + MP','--c-race'];
+    if(s.cat==='subt') return ['Sub-threshold','--c-subt'];
+    if(s.cat==='vo2') return ['VO2max','--c-vo2'];
+    if(s.cat==='race') return ['Race-specific','--c-race'];
+    return ['Race pace','--c-race'];
+  }
+  function weekSummary(days){
+    const n={}; days.forEach(s=>{ if(!s) return; const t=typeOf(s)[0].replace(' + strides',''); n[t]=(n[t]||0)+1; });
+    const order=['Sub-threshold','Taper sub-threshold','VO2max','Race-specific','Race pace','MP long run','Long run + MP','Long run','Easy','Race'];
+    return order.filter(k=>n[k]).map(k=>`${n[k]>1?n[k]+' × ':''}${k.toLowerCase().replace('vo2max','VO2max').replace(' mp',' MP')}`).join(' · ');
+  }
   let PLAN=null;
   function renderPlan(){
     const out=$('planOut'); if(!out) return;
@@ -976,7 +997,7 @@ ol.ex span.d{display:block;color:var(--muted)}
       <div class="vbars">${weeks.map(w=>`<div class="vb" title="Week ${w.w+1}: ${w.total} km" style="--h:${Math.round(w.total/mx*100)}%;--dot:var(${phaseCol[w.phase]})"><span>${w.total}</span></div>`).join('')}</div>
       <div class="vleg">${Object.entries(phaseCol).map(([k,c])=>`<span style="--dot:var(${c})"><i></i>${k}</span>`).join('')}</div></section>`;
     for(const wk of weeks){
-      h+=`<section class="panel week" style="--dot:var(${phaseCol[wk.phase]})"><div class="wkhead"><b>Week ${wk.w+1}</b><span>${fmtDay(wk.start)} – ${fmtDay(addD(wk.start,6))}</span><span class="tag" style="margin:0">${wk.phase}${wk.deload?' · lighter':''}</span><span class="wkkm">${wk.total} km${wk.w===nW-1?' incl. race':''}</span></div>`;
+      h+=`<section class="panel week" style="--dot:var(${phaseCol[wk.phase]})"><div class="wkhead"><b>Week ${wk.w+1}</b><span>${fmtDay(wk.start)} – ${fmtDay(addD(wk.start,6))}</span><span class="tag" style="margin:0">${wk.phase}${wk.deload?' · lighter':''}</span><span class="wkkm">${wk.total} km${wk.w===nW-1?' incl. race':''}</span></div><div class="wksum">${weekSummary(wk.days)} · ${wk.days.filter(x=>!x).length} rest</div>`;
       wk.days.forEach((s,d)=>{
         const date=addD(wk.start,d);
         if(!s){ h+=`<div class="pday rest"><span class="pd">${fmtDay(date)}</span><span>Rest</span></div>`; return; }
@@ -986,7 +1007,7 @@ ol.ex span.d{display:block;color:var(--muted)}
         const title = s.opts&&s.opts.length>1
           ? `<select class="swap" data-date="${ymd(date)}" data-auto="${esc(s.autoBase)}" aria-label="Session on ${fmtDay(date)}">${s.opts.map(o=>`<option value="${esc(o)}"${o===cur?' selected':''}>${esc(o)}${o===s.autoBase?' (plan)':''}</option>`).join('')}</select>${s.name!==cur?` <span class="hint">shortened to ${esc(s.name)} this week</span>`:''}`
           : `<b>${esc(s.name)}</b>`;
-        h+=`<div class="pday${s.kind==='race'?' race':''}${s.swapped?' swapped':''}"><span class="pd">${fmtDay(date)}</span><div>${title} <span class="hint">· ${km} km</span>
+        h+=`<div class="pday${s.kind==='race'?' race':''}${s.swapped?' swapped':''}"><span class="pd">${fmtDay(date)}</span><div><span class="ptype" style="--dot:var(${typeOf(s)[1]})">${typeOf(s)[0]}</span>${title} <span class="hint">· ${km} km</span>
           <div class="hint">${pace}${hrs?` · HR ${hrs}`:''}${s.note?` · ${esc(s.note)}`:''}</div>
           ${s.kind!=='easy'&&s.kind!=='long'?`<details class="wtxt"><summary>Workout text</summary><pre>${esc(workoutText(s))}</pre></details>`:''}</div></div>`;
       });
@@ -1004,7 +1025,7 @@ ol.ex span.d{display:block;color:var(--muted)}
     const L=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Run2Plan//Training plan//EN','CALSCALE:GREGORIAN',`X-WR-CALNAME:Run2Plan ${RNAME[PLAN.dist]}`];
     for(const wk of PLAN.weeks) wk.days.forEach((s,d)=>{
       if(!s) return; const date=addD(wk.start,d), km=sessKm(s);
-      const title=`${s.name} (${km} km)`;
+      const ty=typeOf(s)[0], title=(/^(Easy|Long run|Race)/.test(ty) ? s.name : `${ty}: ${s.name}`)+` (${km} km)`;
       const desc=`${workoutText(s)}\n\nWeek ${wk.w+1}, ${wk.phase}. Run2Plan`;
       L.push('BEGIN:VEVENT',`UID:run2plan-${PLAN.dist}-${ymd(PLAN.race)}-${c(date)}`,`DTSTAMP:${stamp}`,`DTSTART;VALUE=DATE:${c(date)}`,`DTEND;VALUE=DATE:${c(addD(date,1))}`,`SUMMARY:${icsEsc(title)}`,`DESCRIPTION:${icsEsc(desc)}`,'TRANSP:TRANSPARENT','END:VEVENT');
     });
