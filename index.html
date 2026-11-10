@@ -799,7 +799,7 @@ ol.ex span.d{display:block;color:var(--muted)}
       if(w<=peakIdx){
         const target=cur+(peak-cur)*(w/Math.max(1,peakIdx));
         const v=Math.min(target, prev*1.1);
-        const deload=(w+1)%4===0 && w<peakIdx;
+        const deload=(w+1)%4===0 && w<base+trans;
         vol.push(Math.round(deload ? v*0.8 : v)); if(!deload) prev=v;
       } else vol.push(Math.round(w===nW-1 ? peak*((isM||isHM)?0.45:0.6) : peak*0.7));
     }
@@ -818,7 +818,8 @@ ol.ex span.d{display:block;color:var(--muted)}
     const capL={'5000':16,'10000':18,'21097.5':22,'42195':30}[dist];
     const weeks=[]; let specK=0;
     for(let w=0;w<nW;w++){
-      const phase=phaseOf(w), deload=(w+1)%4===0 && w<peakIdx && phase!=='Taper';
+      // lighter weeks only in base and transition, so the race-specific long runs are never cut
+      const phase=phaseOf(w), deload=(w+1)%4===0 && w<base+trans;
       const ws=addD(start,7*w), raceWeek=w===nW-1;
       const nSub = (+P.sub===3 && runs>=5 && !deload && vol[w]>=50) ? 3 : 2;
       const q=qd.slice(0, Math.min(nSub, Math.max(2, runs-1))).sort((a,b)=>a-b);
@@ -852,9 +853,11 @@ ol.ex span.d{display:block;color:var(--muted)}
       // long run
       let L;
       const longKm=Math.min(capL, Math.max(10, r05(vol[w]*(isM?0.3:0.27))));
-      if(phase==='Specific' && isM && !deload){ L=T_.mlong[specK%4]; }
+      // marathon long runs by weeks to race: the biggest (30 km, 14 km at MP) 4 weeks out, never closer;
+      // the last one before the taper is the shorter 2 x 8 km session
+      if(phase==='Specific' && isM){ const k=nW-1-w-taper; L=T_.mlong[[2,3,1,0][k] ?? 0]; }
       else if(phase==='Specific' && isHM && !deload){ const km=longKm; L={kind:'seg',name:`Long run, last 5 km at MP`,segs:[[(km-5)*1000,E,'Easy'],[5000,[R(M)-2,R(M)+3],'MP']],lab:'easy, then MP',hr:'mp'}; }
-      else if(phase==='Taper') L={kind:'long',name:'Long run',km:r05(longKm*0.65),pace:E,lab:'easy pace',hr:'easy'};
+      else if(phase==='Taper') L={kind:'long',name:'Long run',km:isM?20:isHM?14:r05(longKm*0.65),pace:E,lab:'easy pace',hr:'easy'};
       else L={kind:'long',name:'Long run',km:longKm,pace:E,lab:'easy pace',hr:'easy'};
       days[longDay]=L;
       // easy days
