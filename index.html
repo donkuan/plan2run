@@ -529,22 +529,22 @@ ol.ex span.d{display:block;color:var(--muted)}
       {n:'4 × 2.5 km', pl:'threshold (T) pace', k:'d', v:2500, reps:'4', rest:'2 min jog', p:()=>[T+2,T+5], hr:'thr', note:''},
       {n:'20–25 min continuous', pl:'threshold (T) pace', k:'t', v:[1200,1500], post:' continuous', rest:'none', p:()=>[T+3,T+8], hr:'thr', note:'Good fitness check: compare pace at the same HR every few weeks.'},
       {n:'2 × 20 min', pl:'threshold (T) pace', k:'t', v:1200, reps:'2', rest:'3 min jog', p:()=>[T+5,T+10], hr:'thr', note:''},
-      {n:'45/15s, Bakken', pl:'start at 10–15K pace', k:'t', v:45, keep:true, rest:'15 s standing, walking or light jog', p:()=>[R(10000),R(15000)], extra:{l:'Progress to', p:()=>[R(3000),R(5000)]}, hr:'b45', note:'15–30 × 45 s on. From his book: start at 10–15K pace and progress toward 3–5K pace (e.g. a little faster each rep, or in groups of 5). Build volume over 8 weeks: 15, 20, 25, then 30 reps or 2 × 15 with 1–2 min between. Count it as your threshold session that week, not as an extra sub-threshold day.'}
+      {n:'45/15s, Bakken', nreps:'15–30',  pl:'start at 10–15K pace', k:'t', v:45, keep:true, rest:'15 s standing, walking or light jog', p:()=>[R(10000),R(15000)], extra:{l:'Progress to', p:()=>[R(3000),R(5000)]}, hr:'b45', note:'15–30 × 45 s on. From his book: start at 10–15K pace and progress toward 3–5K pace (e.g. a little faster each rep, or in groups of 5). Build volume over 8 weeks: 15, 20, 25, then 30 reps or 2 × 15 with 1–2 min between. Count it as your threshold session that week, not as an extra sub-threshold day.'}
     ]},
     {id:'vo2', name:'VO2max', color:'--c-vo2', when:'Only as race-specific work for a 5K, in the final weeks. Not needed for 10K to marathon: sub-threshold and race-pace work cover it (Steve Magness: VO2max is not the limiter, specific endurance is). Recoveries long enough to hit the pace again; stop when form breaks.', items:[
       {n:'5 × 3 min', pl:'3K–5K pace', k:'t', v:180, reps:'5', rest:'2–3 min jog', p:()=>[R(3000),R(5000)], hr:'vo2', note:'The classic, at 3K-5K effort.'},
       {n:'6 × 1000 m', pl:'5K pace', k:'d', v:1000, reps:'6', rest:'2 min jog', p:()=>[R(5000)-3,R(5000)], hr:'vo2', note:''},
       {n:'12–20 × 30 s on / 30 s off', pl:'1500 m–3K pace', k:'t', v:30, reps:'12–20', post:' on / 30 s off', rest:'30 s float', p:()=>[R(1500),R(3000)], extra:{l:'Float', p:()=>[E[0]-15,E[0]+15]}, hr:'vo2', note:'Lots of time near VO2max with little stress per rep.'},
-      {n:'8–10 × 60–90 s uphill', len:75, rest:'jog down', effort:'Hard, not sprinting', hr:'vo2', note:'Gentle on tendons; good for your posterior tibial history.'},
-      {n:'Hill reps: 2 × 12 × 35 s', k:'t', v:35, keep:true, pl:'10K pace uphill, 1500 m effort', rest:'jog down (~80 s); 5 min between sets', p:()=>[R(10000)-3,R(10000)+3], hr:'none', note:'Almgren: 1500 m race effort for 35 s uphill. On the hill that effort comes out around your 10K pace, so that is the pace shown; let the effort lead if the gradient differs. Much harder than threshold (lactate 10–12 for him, about 3× LT2). Tired afterwards but not spent. Go by effort, not HR: on 35 s reps HR lags behind.'},
+      {n:'8–10 × 60–90 s uphill', work:()=>[[480,900]],  len:75, rest:'jog down', effort:'Hard, not sprinting', hr:'vo2', note:'Gentle on tendons; good for your posterior tibial history.'},
+      {n:'Hill reps: 2 × 12 × 35 s', nreps:'24',  k:'t', v:35, keep:true, pl:'10K pace uphill, 1500 m effort', rest:'jog down (~80 s); 5 min between sets', p:()=>[R(10000)-3,R(10000)+3], hr:'none', note:'Almgren: 1500 m race effort for 35 s uphill. On the hill that effort comes out around your 10K pace, so that is the pace shown; let the effort lead if the gradient differs. Much harder than threshold (lactate 10–12 for him, about 3× LT2). Tired afterwards but not spent. Go by effort, not HR: on 35 s reps HR lags behind.'},
       {n:'20 × 400 m', pl:'5K pace', k:'d', v:400, reps:'20', rest:'1 min standing', p:()=>[R(5000),R(5000)+2], hr:'vo2', note:'Almgren: 8 km at 5K pace, his 5K-specific threshold version.'},
-      {n:'5 × 4 min on the bike', len:240, rest:'3 min easy', effort:'106–120% FTP', hr:'vo2', note:'VO2max stimulus without running impact.'}
+      {n:'5 × 4 min on the bike', work:()=>[[1200,1200]],  len:240, rest:'3 min easy', effort:'106–120% FTP', hr:'vo2', note:'VO2max stimulus without running impact.'}
     ]},
     {id:'k5', name:'5K-specific', color:'--c-race', race:5000, when:'Final 4-6 weeks before a 5K. One a week replaces a sub-threshold session.', items:[
       {n:'20 × 400 m', pl:'5K pace', k:'d', v:400, reps:'20', rest:'1 min', p:()=>[R(5000)-1,R(5000)+1], hr:'race', note:''},
       {n:'5 × 1000 m', pl:'5K pace', k:'d', v:1000, reps:'5', rest:'2 min jog', p:()=>[R(5000)-3,R(5000)], hr:'race', note:''},
       {n:'3 × 1600 m', pl:'5K pace', k:'d', v:1600, reps:'3', rest:'2–3 min jog', p:()=>[R(5000),R(5000)+2], hr:'race', note:''},
-      {n:'2 × (5 × 400 m)', pl:'faster than 5K pace', k:'d', v:400, pre:'2 × (5 × ', post:')', rest:'45 s; 3 min between sets', p:()=>[R(5000)-6,R(5000)-2], hr:'race', note:'Cut down through each set.'}
+      {n:'2 × (5 × 400 m)', nreps:'10',  pl:'faster than 5K pace', k:'d', v:400, pre:'2 × (5 × ', post:')', rest:'45 s; 3 min between sets', p:()=>[R(5000)-6,R(5000)-2], hr:'race', note:'Cut down through each set.'}
     ]},
     {id:'k10', name:'10K-specific', color:'--c-race', race:10000, when:'Final 4-6 weeks before a 10K.', items:[
       {n:'8 × 1000 m', pl:'just faster than 10K pace', k:'d', v:1000, reps:'8', rest:'1 min', p:()=>[R(10000)-5,R(10000)-3], hr:'race', note:'Almgren: just faster than race pace (2:37 vs about 2:41 for him). Final key session 10-14 days out.'},
@@ -560,18 +560,18 @@ ol.ex span.d{display:block;color:var(--muted)}
       {n:'15 km progression', pl:'MP → HM pace', k:'d', v:15000, post:' progression', rest:'none', p:()=>[R(HM)-2,R(M)], hr:'race', note:'Start at marathon pace, finish just under half pace.'}
     ]},
     {id:'mar', name:'Marathon-specific', color:'--c-race', race:M, when:'The long run is the key session. Every 7-10 days in the specific phase. Rehearse fuelling (a gel every 6 km) and race shoes.', items:[
-      {n:'28–30 km, last 12–16 km at marathon pace', pl:'MP', len:3000, rest:'none', p:()=>[R(M)-2,R(M)+3], extra:{l:'First part', p:()=>E}, hr:'mp', note:'The core session.'},
-      {n:'30 km with 3 × 5 km at marathon pace', pl:'MP', k:'d', v:5000, pre:'30 km with 3 × ', post:' at marathon pace', rest:'1 km easy between', p:()=>[R(M)-2,R(M)+3], hr:'mp', note:'Breaks the pace into pieces early in the phase.'},
+      {n:'28–30 km, last 12–16 km at marathon pace', work:r=>[[12*(r[0]+r[1])/2,16*(r[0]+r[1])/2]],  pl:'MP', len:3000, rest:'none', p:()=>[R(M)-2,R(M)+3], extra:{l:'First part', p:()=>E}, hr:'mp', note:'The core session.'},
+      {n:'30 km with 3 × 5 km at marathon pace', nreps:'3',  pl:'MP', k:'d', v:5000, pre:'30 km with 3 × ', post:' at marathon pace', rest:'1 km easy between', p:()=>[R(M)-2,R(M)+3], hr:'mp', note:'Breaks the pace into pieces early in the phase.'},
       {n:'2 × 8 km at marathon pace', pl:'MP', k:'d', v:8000, reps:'2', post:' at marathon pace', rest:'1 km float', p:()=>[R(M)-2,R(M)+3], extra:{l:'Float', p:()=>[R(M)+15,R(M)+25]}, hr:'mp', note:'Inside a 22-25 km run.'},
-      {n:'12–16 km alternating 1 km MP / 1 km float', pl:'MP', len:240, rest:'continuous', p:()=>[R(M)-2,R(M)+3], extra:{l:'Float', p:()=>[R(M)+15,R(M)+25]}, hr:'mp', note:'Teaches clearing lactate at pace.'},
-      {n:'32 km progressive', pl:'easy → MP', len:7000, rest:'none', p:()=>[R(M),E[1]], hr:'mp', note:'Easy down to marathon pace. Final long run, 3-4 weeks out.'},
+      {n:'12–16 km alternating 1 km MP / 1 km float', work:r=>[[6*(r[0]+r[1])/2,8*(r[0]+r[1])/2]],  pl:'MP', len:240, rest:'continuous', p:()=>[R(M)-2,R(M)+3], extra:{l:'Float', p:()=>[R(M)+15,R(M)+25]}, hr:'mp', note:'Teaches clearing lactate at pace.'},
+      {n:'32 km progressive', work:()=>null,  pl:'easy → MP', len:7000, rest:'none', p:()=>[R(M),E[1]], hr:'mp', note:'Easy down to marathon pace. Final long run, 3-4 weeks out.'},
       {n:'3 × 17 min', pl:'MP', k:'t', v:1020, reps:'3', rest:'2.5 min jog', p:()=>[R(M)-2,R(M)+5], hr:'mp', note:'Mid-week marathon session.'}
     ]},
     {id:'sup', name:'Support work', color:'--c-sup', when:'Short additions that build the durability your quads lacked in The Hague.', items:[
-      {n:'Strides 6–8 × 20 s', pl:'1500 m pace', k:'t', v:20, pre:'Strides 6–8 × ', rest:'walk back', p:()=>[R(1500)-5,R(1500)+5], hr:'none', note:'Relaxed and fast, 1-2 × a week after easy runs.'},
-      {n:'Hill sprints 6–8 × 10 s', len:10, rest:'walk down', effort:'Full effort', hr:'none', note:'Power and tendon stiffness at low risk, 1 × a week.'},
-      {n:'Hills at the end of the long run', len:30, rest:'jog down', effort:'4–6 × 30 s uphill, hard', hr:'none', note:'Fatigue resistance, every long run.'},
-      {n:'Controlled downhill 4–6 × 200 m', pl:'easy pace', k:'d', v:200, pre:'Controlled downhill 4–6 × ', rest:'walk up', p:()=>E, hr:'easy', note:'Braking (eccentric) strength for the quads, 1 × a week in base.'},
+      {n:'Strides 6–8 × 20 s', nreps:'6–8',  pl:'1500 m pace', k:'t', v:20, pre:'Strides 6–8 × ', rest:'walk back', p:()=>[R(1500)-5,R(1500)+5], hr:'none', note:'Relaxed and fast, 1-2 × a week after easy runs.'},
+      {n:'Hill sprints 6–8 × 10 s', work:()=>[[60,80]],  len:10, rest:'walk down', effort:'Full effort', hr:'none', note:'Power and tendon stiffness at low risk, 1 × a week.'},
+      {n:'Hills at the end of the long run', work:()=>[[120,180]],  len:30, rest:'jog down', effort:'4–6 × 30 s uphill, hard', hr:'none', note:'Fatigue resistance, every long run.'},
+      {n:'Controlled downhill 4–6 × 200 m', work:()=>null,  pl:'easy pace', k:'d', v:200, pre:'Controlled downhill 4–6 × ', rest:'walk up', p:()=>E, hr:'easy', note:'Braking (eccentric) strength for the quads, 1 × a week in base.'},
       {n:'Strength 20–25 min', rest:'', effort:'Step-downs, split squats, lunges, single-leg calf raises, hip abduction', hr:'none', note:'2 × a week: quads, posterior tibial tendon and hips.'},
       {n:'Easy run', pl:'easy pace', rest:'', p:()=>E, hr:'easy', note:'Slower is fine; this is where the volume comes from.'}
     ]}
@@ -606,6 +606,18 @@ ol.ex span.d{display:block;color:var(--muted)}
       return w.k==='t' ? fmtSet(vs, natDur) : `${mmss(lo*fast/1000)}–${mmss(hi*slow/1000)}`; };
     return one(w.v) + (w.or ? ' / ' + one(w.or.v) : '');
   }
+  // total work time of a session (reps x rep length), in seconds, as [low, high] per option
+  const rr = x => { const m=String(x??'1').match(/(\d+)(?:\s*–\s*(\d+))?/); return m?[+m[1],+(m[2]||m[1])]:[1,1]; };
+  function workRange(w, r){
+    if(w.work) return w.work(r);
+    if(!w.k) return null;
+    const p=r?(r[0]+r[1])/2:null;
+    const one=(reps,v)=>{ const n=rr(reps), vv=arr(v), sec=x=>w.k==='t'?x:(p?x*p/1000:null), a=sec(vv[0]), b=sec(vv[vv.length-1]); return a==null?null:[n[0]*a,n[1]*b]; };
+    const main=one(w.nreps??w.reps, w.v); if(!main) return null;
+    return w.or ? [main, one(w.or.reps, w.or.v)] : [main];
+  }
+  const fmtMin = x => { const r=Math.round(x/15)*15; return r<300 && r%60 ? `${Math.floor(r/60)}:${String(r%60).padStart(2,'0')}` : `${Math.round(x/60)}`; };
+  const fmtWork = list => list ? list.filter(Boolean).map(([a,b])=>fmtMin(a)===fmtMin(b)?`${fmtMin(a)} min`:`${fmtMin(a)}–${fmtMin(b)} min`).join(' / ') : '';
   function repSec(w, r){
     if(!w.k) return w.len ?? Infinity;
     const vs=arr(w.v), v=(vs[0]+vs[vs.length-1])/2;
@@ -988,6 +1000,13 @@ ol.ex span.d{display:block;color:var(--muted)}
     const order=['Sub-threshold','Taper sub-threshold','VO2max','Race-specific','Race pace','MP long run','Long run + MP','Long run','Easy','Race'];
     return order.filter(k=>n[k]).map(k=>`${n[k]>1?n[k]+' × ':''}${k.toLowerCase().replace('vo2max','VO2max').replace(/\bmp\b/,'MP')}`).join(' · ');
   }
+  function planWork(s){
+    if(!s) return 0;
+    if(s.kind==='iv') return s.reps*(s.size.t ?? s.size.d*midP(s.pace)/1000);
+    if(s.kind==='seg') return s.segs.filter(x=>x[2]==='MP').reduce((a,[m,p])=>a+m*midP(p)/1000,0);
+    if(s.kind==='blk') return s.steps.filter(x=>x.cue==='SubT').reduce((a,x)=>a+x.t,0);
+    return 0;
+  }
   let PLAN=null;
   function renderPlan(){
     const out=$('planOut'); if(!out) return;
@@ -1002,7 +1021,7 @@ ol.ex span.d{display:block;color:var(--muted)}
       <div class="vbars">${weeks.map(w=>`<div class="vb" title="Week ${w.w+1}: ${w.total} km" style="--h:${Math.round(w.total/mx*100)}%;--dot:var(${phaseCol[w.phase]})"><span>${w.total}</span></div>`).join('')}</div>
       <div class="vleg">${Object.entries(phaseCol).map(([k,c])=>`<span style="--dot:var(${c})"><i></i>${k}</span>`).join('')}</div></section>`;
     for(const wk of weeks){
-      h+=`<section class="panel week" style="--dot:var(${phaseCol[wk.phase]})"><div class="wkhead"><b>Week ${wk.w+1}</b><span>${fmtDay(wk.start)} – ${fmtDay(addD(wk.start,6))}</span><span class="tag" style="margin:0">${wk.phase}${wk.deload?' · lighter':''}</span><span class="wkkm">${wk.total} km${wk.w===nW-1?' incl. race':''}</span></div><div class="wksum">${weekSummary(wk.days)} · ${wk.days.filter(x=>!x).length} rest</div>`;
+      h+=`<section class="panel week" style="--dot:var(${phaseCol[wk.phase]})"><div class="wkhead"><b>Week ${wk.w+1}</b><span>${fmtDay(wk.start)} – ${fmtDay(addD(wk.start,6))}</span><span class="tag" style="margin:0">${wk.phase}${wk.deload?' · lighter':''}</span><span class="wkkm">${wk.total} km${wk.w===nW-1?' incl. race':''}</span></div><div class="wksum">${weekSummary(wk.days)} · ${wk.days.filter(x=>!x).length} rest${(q=>q?` · <b>${Math.round(q/60)} min quality work</b>`:'')(wk.days.reduce((a,x)=>a+planWork(x),0))}</div>`;
       wk.days.forEach((s,d)=>{
         const date=addD(wk.start,d);
         if(!s){ h+=`<div class="pday rest"><span class="pd">${fmtDay(date)}</span><span>Rest</span></div>`; return; }
@@ -1013,7 +1032,7 @@ ol.ex span.d{display:block;color:var(--muted)}
           ? `<select class="swap" data-date="${ymd(date)}" data-auto="${esc(s.autoBase)}" aria-label="Session on ${fmtDay(date)}">${s.opts.map(o=>`<option value="${esc(o)}"${o===cur?' selected':''}>${esc(o)}${o===s.autoBase?' (plan)':''}</option>`).join('')}</select>${s.name!==cur?` <span class="hint">shortened to ${esc(s.name)} this week</span>`:''}`
           : `<b>${esc(s.name)}</b>`;
         h+=`<div class="pday${s.kind==='race'?' race':''}${s.swapped?' swapped':''}"><span class="pd">${fmtDay(date)}</span><div><span class="ptype" style="--dot:var(${typeOf(s)[1]})">${typeOf(s)[0]}</span>${title} <span class="hint">· ${km} km</span>
-          <div class="hint">${pace}${hrs?` · HR ${hrs}`:''}${s.note?` · ${esc(s.note)}`:''}</div>
+          <div class="hint">${planWork(s)?`<b>${Math.round(planWork(s)/60)} min work</b> · `:''}${pace}${hrs?` · HR ${hrs}`:''}${s.note?` · ${esc(s.note)}`:''}</div>
           ${s.kind!=='easy'&&s.kind!=='long'?`<details class="wtxt"><summary>Workout text</summary><pre>${esc(workoutText(s))}</pre></details>`:''}</div></div>`;
       });
       h+='</section>';
@@ -1112,10 +1131,10 @@ ol.ex span.d{display:block;color:var(--muted)}
           if(w.extra){ const x0=w.extra.p(), x=x0&&x0.map(ADJ); pace+= x ? `<small>${w.extra.l} ${rng(x[0],x[1])}</small>` : `<small>${w.extra.l} ${Math.round(45000/Math.max(r[0],r[1]))}–${Math.round(45000/Math.min(r[0],r[1]))} m</small>`; } }
         const b=`i.${c.id}.${w.n}.`;
         if(!w.p) pace=`<span style="font-family:var(--body);font-weight:600" ${ek(b+'effort')}>${tx(b+'effort',w.effort)}</span>`;
-        return `<tr><td class="wname" ${ek(b+'n')}>${tx(b+'n',repName(w,r))}</td><td ${ek(b+'rest')}>${tx(b+'rest',w.rest)}</td><td class="p">${pace}</td><td class="p">${rep}</td><td>${hr[w.hr]()}</td><td class="note" ${ek(b+'note')}>${tx(b+'note',w.note)}</td></tr>`;
+        return `<tr><td class="wname" ${ek(b+'n')}>${tx(b+'n',repName(w,r))}</td><td ${ek(b+'rest')}>${tx(b+'rest',w.rest)}</td><td class="p">${pace}</td><td class="p">${rep}</td><td class="p">${fmtWork(workRange(w,r))}</td><td>${hr[w.hr]()}</td><td class="note" ${ek(b+'note')}>${tx(b+'note',w.note)}</td></tr>`;
       }).join('');
       return `<section class="cat" style="--dot:var(${c.color})"><div class="cathead"><h2 ${ek(`c.${c.id}.name`)}>${tx(`c.${c.id}.name`,c.name)}</h2>${racep}<p ${ek(`c.${c.id}.when`)}>${tx(`c.${c.id}.when`,c.when)}</p></div>
-        <div class="panel scroll" style="padding:4px 8px"><table><thead><tr><th>Session</th><th>Recovery</th><th>Pace</th><th>${S.rep==='time'?'Rep distance':'Rep time'}</th><th>HR</th><th>Notes</th></tr></thead><tbody>${rows}</tbody></table></div></section>`;
+        <div class="panel scroll" style="padding:4px 8px"><table><thead><tr><th>Session</th><th>Recovery</th><th>Pace</th><th>${S.rep==='time'?'Rep distance':'Rep time'}</th><th>Work</th><th>HR</th><th>Notes</th></tr></thead><tbody>${rows}</tbody></table></div></section>`;
     }).join('');
     condSummaries();
     renderPlan();
