@@ -106,6 +106,7 @@ select.rowpace{width:auto;font-size:13px;padding:4px 6px;margin-bottom:2px}
 .wkhead b{font-family:var(--display);font-size:20px;text-transform:uppercase}
 .wkhead span{color:var(--muted);font-size:13.5px}
 .wksum{font-size:13px;color:var(--muted);margin:-2px 0 6px}
+.qp{font-weight:700}.qp.ok{color:var(--c-subt)}.qp.hi{color:var(--c-vo2)}.qp.lo{color:var(--c-thr)}
 .ptype{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--dot);margin-bottom:2px}
 .wkhead .wkkm{margin-left:auto;font-family:var(--mono);font-weight:600;color:var(--fg)}
 .pday{display:grid;grid-template-columns:92px minmax(0,1fr);gap:8px;padding:7px 0;border-top:1px solid var(--line)}
@@ -1050,6 +1051,25 @@ ol.ex span.d{display:block;color:var(--muted)}
     if(s.kind==='blk') return s.steps.filter(x=>x.cue==='SubT').reduce((a,x)=>a+x.t,0);
     return 0;
   }
+  // running time of a session in seconds: 5 km warm-up and cool-down at easy pace, jog recoveries 30 s/km slower
+  function sessSec(s){
+    if(!s) return 0;
+    const e=midP(E);
+    if(s.kind==='iv') return 5*e + planWork(s) + Math.max(0,s.reps-1)*(s.rec.d ? s.rec.d/1000*(s.rec.float?e:e+30) : s.rec.t);
+    if(s.kind==='seg') return s.segs.reduce((a,[m,p])=>a+m*midP(p)/1000,0);
+    if(s.kind==='blk') return s.steps.reduce((a,x)=>a+x.t,0);
+    if(s.kind==='race') return s.km*midP(s.pace);
+    return (s.km||0)*e;
+  }
+  // quality work as a share of the week's running time; aim 20-25%
+  const Q_AIM=[20,25];
+  const qStats = days => { const q=days.reduce((a,x)=>a+planWork(x),0), t=days.reduce((a,x)=>a+sessSec(x),0); return {q, t, pc: t ? Math.round(q/t*100) : 0}; };
+  const hmin = s => { const m=Math.round(s/60); return m>=60 ? `${Math.floor(m/60)} h ${String(m%60).padStart(2,'0')}` : `${m} min`; };
+  function qLine(wk){
+    const {q,t,pc}=qStats(wk.days); if(!t) return '';
+    const c = wk.phase==='Taper' ? '' : pc>Q_AIM[1] ? 'hi' : pc<Q_AIM[0] ? 'lo' : 'ok';
+    return ` · ${hmin(t)} running${q ? ` · <b>${Math.round(q/60)} min quality</b> = <span class="qp ${c}">${pc}%</span>` : ''}`;
+  }
   let PLAN=null;
   function renderPlan(){
     const out=$('planOut'); if(!out) return;
@@ -1060,11 +1080,13 @@ ol.ex span.d{display:block;color:var(--muted)}
     const phaseCol={Base:'--c-subt',Transition:'--c-thr',Specific:'--c-race',Taper:'--c-vo2'};
     let h=`<section class="panel"><h3 style="margin-top:0">${RNAME[dist]} on ${fmtDay(PLAN.race)}: ${nW} weeks, ${sum} km</h3>
       <p class="hint" style="margin:0 0 10px">Base ${PLAN.base} · transition ${PLAN.trans} · specific ${PLAN.spec} · taper ${PLAN.taper} weeks. Paces from VDOT ${S.vd.toFixed(1)}; race pace ${mmss(u(R(+dist)))}${uLbl()}. Every 4th week is lighter. Quality sessions are shortened when they would be more than about 30% of the week; 3 sub-threshold days need 50+ km a week.</p>
+      ${(()=>{ const ps=weeks.filter(w=>w.phase!=='Taper').map(w=>qStats(w.days).pc), avg=Math.round(ps.reduce((a,b)=>a+b,0)/ps.length), out=ps.filter(p=>p<Q_AIM[0]||p>Q_AIM[1]).length;
+        return `<p class="hint" style="margin:0 0 10px">Quality work: the time in the work reps and MP blocks, not warm-ups or recoveries, as a share of the week's running time. Aim ${Q_AIM[0]}–${Q_AIM[1]}%. This plan: ${Math.min(...ps)}–${Math.max(...ps)}% before the taper, average <span class="qp ${avg>Q_AIM[1]?'hi':avg<Q_AIM[0]?'lo':'ok'}">${avg}%</span>${out?`; ${out} of ${ps.length} weeks outside the aim`:''}.</p>`; })()}
       ${PLAN.warn.length?`<p class="pwarn">${PLAN.warn.map(esc).join(' ')}</p>`:''}
       <div class="vbars">${weeks.map(w=>`<div class="vb" title="Week ${w.w+1}: ${w.total} km" style="--h:${Math.round(w.total/mx*100)}%;--dot:var(${phaseCol[w.phase]})"><span>${w.total}</span></div>`).join('')}</div>
       <div class="vleg">${Object.entries(phaseCol).map(([k,c])=>`<span style="--dot:var(${c})"><i></i>${k}</span>`).join('')}</div></section>`;
     for(const wk of weeks){
-      h+=`<section class="panel week" style="--dot:var(${phaseCol[wk.phase]})"><div class="wkhead"><b>Week ${wk.w+1}</b><span>${fmtDay(wk.start)} – ${fmtDay(addD(wk.start,6))}</span><span class="tag" style="margin:0">${wk.phase}${wk.deload?' · lighter':''}</span><span class="wkkm">${wk.total} km${wk.w===nW-1?' incl. race':''}</span></div><div class="wksum">${weekSummary(wk.days)} · ${wk.days.filter(x=>!x).length} rest${(q=>q?` · <b>${Math.round(q/60)} min quality work</b>`:'')(wk.days.reduce((a,x)=>a+planWork(x),0))}</div>`;
+      h+=`<section class="panel week" style="--dot:var(${phaseCol[wk.phase]})"><div class="wkhead"><b>Week ${wk.w+1}</b><span>${fmtDay(wk.start)} – ${fmtDay(addD(wk.start,6))}</span><span class="tag" style="margin:0">${wk.phase}${wk.deload?' · lighter':''}</span><span class="wkkm">${wk.total} km${wk.w===nW-1?' incl. race':''}</span></div><div class="wksum">${weekSummary(wk.days)} · ${wk.days.filter(x=>!x).length} rest${qLine(wk)}</div>`;
       wk.days.forEach((s,d)=>{
         const date=addD(wk.start,d);
         if(!s){ h+=`<div class="pday rest"><span class="pd">${fmtDay(date)}</span><span>Rest</span></div>`; return; }
