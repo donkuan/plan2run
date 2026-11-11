@@ -899,8 +899,11 @@ ol.ex span.d{display:block;color:var(--muted)}
       // lighter weeks only in base and transition, so the race-specific long runs are never cut
       const phase=phaseOf(w), deload=(w+1)%4===0 && w<base+trans;
       const ws=addD(start,7*w), raceWeek=w===nW-1;
-      const nSub = (+P.sub===3 && runs>=5 && !deload && vol[w]>=50) ? 3 : 2;
-      const qAll=qd.slice(0, Math.min(nSub, Math.max(2, runs-1))).sort((a,b)=>a-b);
+      // low weekly volume: fewer runs (about 8 km each, at least 3) and below 30 km one quality session,
+      // so the week stays close to the planned km instead of being pushed up by minimum session lengths
+      const runsW=Math.min(runs, Math.max(3, Math.round(vol[w]/8)));
+      const nSub = vol[w]<30 ? 1 : (+P.sub===3 && runsW>=5 && !deload && vol[w]>=50) ? 3 : 2;
+      const qAll=qd.slice(0, Math.min(nSub, Math.max(nSub===1?1:2, runsW-1))).sort((a,b)=>a-b);
       if(qAll.length>pickedQ) usedExtra=true;
       // one try at the week: f shortens the midweek quality sessions, nq is how many there are
       // (in the specific phase: how many sub-threshold sessions next to the one race-specific session)
@@ -955,24 +958,27 @@ ol.ex span.d{display:block;color:var(--muted)}
           const planned=days.filter(Boolean).length+1+(mustEasy!=null?1:0);
           const bd=[0,1,2,3,4,5,6].filter(d=>!days[d]&&d!==longDay&&!restSet.has(d)&&!forceRest.has(d)&&d!==mustEasy&&!adj(d,raceDay))
             .sort((a,b)=>qd2.filter(x=>adj(a,x)).length-qd2.filter(x=>adj(b,x)).length)[0];
-          if(bd!=null && planned<runs) days[bd]={...scaleReps(T_.b45,b45n/20), note:'Short sub-threshold top-up (Bakken): 45 s on, 15 s standing or walking. Start at 10–15K pace and work toward 3–5K pace over the weeks; it should feel easier than the other sessions.'};
+          if(bd!=null && planned<runsW) days[bd]={...scaleReps(T_.b45,b45n/20), note:'Short sub-threshold top-up (Bakken): 45 s on, 15 s standing or walking. Start at 10–15K pace and work toward 3–5K pace over the weeks; it should feel easier than the other sessions.'};
         }
       } else q.forEach((d,i)=>{ if(Q[i]) days[d]={...Q[i]}; });
       // long run
       let L;
-      const longKm=Math.min(capL, Math.max(10, r05(vol[w]*(isM?0.3:0.27))));
+      const longKm=Math.min(capL, Math.max(Math.min(10, r05(vol[w]*0.4)), r05(vol[w]*(isM?0.3:0.27))));
       // marathon long runs by weeks to race: the biggest (30 km, 14 km at MP) 4 weeks out, never closer;
       // the last one before the taper is the shorter 2 x 8 km session
       if(phase==='Specific' && isM){ const k=nW-1-w-taper; L=T_.mlong[[2,3,1,0][k] ?? 0]; }
-      else if(phase==='Taper') L={kind:'long',name:'Long run',km:isM?20:isHM?14:r05(longKm*0.65),pace:E,lab:'easy pace',hr:'easy'};
+      else if(phase==='Taper') L={kind:'long',name:'Long run',km:isM||isHM?Math.min(isM?20:14, Math.max(8, r05(vol[w]*0.45))):r05(longKm*0.65),pace:E,lab:'easy pace',hr:'easy'};
       else L={kind:'long',name:'Long run',km:longKm,pace:E,lab:'easy pace',hr:'easy'};
       days[longDay]=L;
       // easy days
-      const nEasy=Math.max(0, runs - days.filter(Boolean).length);
+      const nEasy=Math.max(0, runsW - days.filter(Boolean).length);
       const pref=[...(mustEasy!=null&&!days[mustEasy]?[mustEasy]:[]), ...[2,0,4,6,5,1,3].filter(d=>!days[d] && !restSet.has(d) && !forceRest.has(d) && d!==mustEasy)];
+      // fewer runs than usual: spread the easy runs away from the quality days
+      if(runsW<runs){ const hard=[0,1,2,3,4,5,6].filter(d=>days[d]&&days[d].kind!=='long'), nb=d=>hard.filter(x=>Math.abs(x-d)===1||Math.abs(x-d)===6).length;
+        pref.sort((a,b)=>(a===mustEasy?-1:b===mustEasy?1:nb(a)-nb(b))); }
       const easyDays=pref.slice(0,nEasy).sort((a,b)=>a-b);
       const used=days.filter(Boolean).reduce((a,s)=>a+sessKm(s),0);
-      const ek=nEasy? Math.min(16, Math.max(5, (vol[w]-used)/nEasy)) : 0;
+      const ek=nEasy? Math.min(16, Math.max(vol[w]<30?4:5, (vol[w]-used)/nEasy)) : 0;
       easyDays.forEach((d,i)=>{ days[d]=easy(ek, i===0 && phase!=='Taper' ? '6 × 20 s strides' : null); });
       return days;
       };
@@ -981,13 +987,15 @@ ol.ex span.d{display:block;color:var(--muted)}
       const share=ds=>{ const t=ds.reduce((a,x)=>a+sessSec(x),0); return t ? ds.reduce((a,x)=>a+planWork(x),0)/t : 0; };
       const cap=Q_CAP/100, nq0=qAll.length;
       const tries = phase==='Taper' ? [[1,nq0]]
-        : phase==='Specific' ? [[1,2],[0.9,2],[0.8,2],[1,1],[0.9,1],[0.8,1],[0.7,1],[0.6,1]]
-        : [[1,nq0],[0.9,nq0],[0.8,nq0],[0.7,nq0], ...(nq0>2?[[1,2],[0.9,2],[0.8,2],[0.7,2]]:[]), [0.6,Math.min(2,nq0)]];
+        : phase==='Specific' ? [[1,2],[0.9,2],[0.8,2],[1,1],[0.9,1],[0.8,1],[0.7,1],[0.6,1],[0.5,1],[0.4,1], ...(vol[w]<30?[[1,0]]:[])]
+        : [[1,nq0],[0.9,nq0],[0.8,nq0],[0.7,nq0], ...(nq0>2?[[1,2],[0.9,2],[0.8,2],[0.7,2]]:[]), [0.6,Math.min(2,nq0)], [0.5,1], [0.4,1]];
+      // a week fits when quality is within the limit and the km stay close to the plan (minimum session lengths can push them up)
+      const kmOf=ds=>ds.reduce((a,x)=>a+(x?sessKm(x):0),0), fits=ds=>share(ds)<=cap+0.004 && (phase==='Taper' || kmOf(ds)<=vol[w]*1.1+1);
       let days, tt;
-      for(const t of tries){ tt=t; days=make(...t); if(share(days)<=cap+0.004) break; }
+      for(const t of tries){ tt=t; days=make(...t); if(fits(days)) break; }
       // 5K: under 20%, top up with Bakken 45/15s (as many reps as fit under the limit)
       if(phase==='Specific' && dist==='5000' && share(days)<Q_AIM[0]/100)
-        for(const n of [30,25,20,15,10]){ const d2=make(tt[0],tt[1],n); if(share(d2)<=cap+0.004){ days=d2; break; } }
+        for(const n of [30,25,20,15,10]){ const d2=make(tt[0],tt[1],n); if(fits(d2)){ days=d2; break; } }
       // low-volume marathon: still over the limit with one short sub-threshold session, so that session is optional
       if(phase==='Specific' && isM && share(days)>cap+0.004)
         days=days.map(s=>s&&s.cat==='subt' ? {...s, optional:true, note:[s.note,'Optional this week: run it only if you have recovered well from the MP long run, otherwise make it an easy run.'].filter(Boolean).join(' ')} : s);
