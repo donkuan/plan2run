@@ -762,6 +762,7 @@ ol.ex span.d{display:block;color:var(--muted)}
         iv('4 × 8 min',4,{t:480},{t:90},[R(25000),R(30000)],'25–30K pace','subL'),
         iv('3 × 10 min',3,{t:600},{t:90},[R(25000),R(30000)],'25–30K pace','subL')],
       subMP: iv('3 × 17 min',3,{t:1020},{t:150},[mp-2,mp+5],'MP','mp'),
+      b45: iv('20 × 45/15 s, Bakken',20,{t:45},{t:15,stand:true},[R(10000),R(15000)],'start at 10–15K pace','b45'),
       vo2:[
         iv('16 × 30 s on / 30 s off',16,{t:30},{t:30,float:true},[R(1500),R(3000)],'1500 m–3K pace','vo2'),
         iv('5 × 3 min',5,{t:180},{t:150},[R(3000),R(5000)],'3K–5K pace','vo2'),
@@ -789,13 +790,13 @@ ol.ex span.d{display:block;color:var(--muted)}
     };
     // categories decide which sessions can replace each other in the plan
     const tag=(arr,cat)=>arr.forEach(x=>{ x.cat=cat; x.base=x.name; });
-    tag(t.subShort,'subt'); tag(t.subLong,'subt'); tag([t.subMP],'subt'); tag(t.vo2,'vo2'); tag(t.race[dist0()],'race'); tag(t.mlong,'mlong');
-    [...t.subShort,...t.subLong,t.subMP,...t.vo2,...t.race[dist0()],...t.mlong].forEach(x=>x.lib=libRef(x));
+    tag(t.subShort,'subt'); tag(t.subLong,'subt'); tag([t.subMP,t.b45],'subt'); tag(t.vo2,'vo2'); tag(t.race[dist0()],'race'); tag(t.mlong,'mlong');
+    [...t.subShort,...t.subLong,t.subMP,t.b45,...t.vo2,...t.race[dist0()],...t.mlong].forEach(x=>x.lib=libRef(x));
     return t;
   }
   // which row in the running tab a plan session belongs to, so the names you give sessions there show up in the plan
   const LIBMAP={
-    subt:{'4 × 8 min':'subt.4 × 8 min or 3 × 10 min','3 × 10 min':'subt.4 × 8 min or 3 × 10 min','3 × 17 min':'subt.2 × 15 min or 3 × 17 min'},
+    subt:{'4 × 8 min':'subt.4 × 8 min or 3 × 10 min','3 × 10 min':'subt.4 × 8 min or 3 × 10 min','3 × 17 min':'subt.2 × 15 min or 3 × 17 min','20 × 45/15 s, Bakken':'subt.45/15s, Bakken'},
     vo2:{'16 × 30 s on / 30 s off':'vo2.12–20 × 30 s on / 30 s off'},
     race:{'16 × 30 s on / 30 s off':'vo2.12–20 × 30 s on / 30 s off','2 × 8 km':'mar.2 × 8 km at marathon pace'},
     mlong:{'Long run with 3 × 5 km at MP':'mar.30 km with 3 × 5 km at marathon pace','Long run, last 12 km at MP':'mar.28–30 km, last 12–16 km at marathon pace','Long run, last 14 km at MP':'mar.28–30 km, last 12–16 km at marathon pace','Long run with 2 × 8 km at MP':'mar.2 × 8 km at marathon pace'}
@@ -815,7 +816,7 @@ ol.ex span.d{display:block;color:var(--muted)}
   }
   const dist0 = () => S.plan.dist;
   function catOptions(t,cat){
-    if(cat==='subt') return [...t.subShort, ...t.subLong, t.subMP];
+    if(cat==='subt') return [...t.subShort, ...t.subLong, t.subMP, t.b45];
     if(cat==='vo2') return t.vo2;
     if(cat==='race') return t.race[dist0()];
     if(cat==='mlong') return t.mlong;
@@ -903,7 +904,8 @@ ol.ex span.d{display:block;color:var(--muted)}
       if(qAll.length>pickedQ) usedExtra=true;
       // one try at the week: f shortens the midweek quality sessions, nq is how many there are
       // (in the specific phase: how many sub-threshold sessions next to the one race-specific session)
-      const make=(f,nq)=>{
+      // b45n (5K specific phase): reps of Bakken 45/15s added as a short sub-threshold top-up
+      const make=(f,nq,b45n=0)=>{
       const days=Array(7).fill(null);
       // quality sessions
       const Q=[];
@@ -947,6 +949,14 @@ ol.ex span.d{display:block;color:var(--muted)}
         const SUB=isM?Q:Q.slice(1);
         if(raceDay!=null && !isM) days[raceDay]={...Q[0]};
         subDays.slice(0,nq).forEach((d,i)=>{ if(SUB[i]) days[d]={...SUB[i]}; });
+        // 5K: Bakken 45/15s on a free day that is not next to the race-specific day, if the runs a week allow it
+        if(b45n && raceDay!=null){
+          const adj=(a,b)=>Math.abs(a-b)===1||Math.abs(a-b)===6, qd2=subDays.slice(0,nq);
+          const planned=days.filter(Boolean).length+1+(mustEasy!=null?1:0);
+          const bd=[0,1,2,3,4,5,6].filter(d=>!days[d]&&d!==longDay&&!restSet.has(d)&&!forceRest.has(d)&&d!==mustEasy&&!adj(d,raceDay))
+            .sort((a,b)=>qd2.filter(x=>adj(a,x)).length-qd2.filter(x=>adj(b,x)).length)[0];
+          if(bd!=null && planned<runs) days[bd]={...scaleReps(T_.b45,b45n/20), note:'Short sub-threshold top-up (Bakken): 45 s on, 15 s standing or walking. Start at 10–15K pace and work toward 3–5K pace over the weeks; it should feel easier than the other sessions.'};
+        }
       } else q.forEach((d,i)=>{ if(Q[i]) days[d]={...Q[i]}; });
       // long run
       let L;
@@ -973,8 +983,14 @@ ol.ex span.d{display:block;color:var(--muted)}
       const tries = phase==='Taper' ? [[1,nq0]]
         : phase==='Specific' ? [[1,2],[0.9,2],[0.8,2],[1,1],[0.9,1],[0.8,1],[0.7,1],[0.6,1]]
         : [[1,nq0],[0.9,nq0],[0.8,nq0],[0.7,nq0], ...(nq0>2?[[1,2],[0.9,2],[0.8,2],[0.7,2]]:[]), [0.6,Math.min(2,nq0)]];
-      let days;
-      for(const t of tries){ days=make(...t); if(share(days)<=cap+0.004) break; }
+      let days, tt;
+      for(const t of tries){ tt=t; days=make(...t); if(share(days)<=cap+0.004) break; }
+      // 5K: under 20%, top up with Bakken 45/15s (as many reps as fit under the limit)
+      if(phase==='Specific' && dist==='5000' && share(days)<Q_AIM[0]/100)
+        for(const n of [30,25,20,15,10]){ const d2=make(tt[0],tt[1],n); if(share(d2)<=cap+0.004){ days=d2; break; } }
+      // low-volume marathon: still over the limit with one short sub-threshold session, so that session is optional
+      if(phase==='Specific' && isM && share(days)>cap+0.004)
+        days=days.map(s=>s&&s.cat==='subt' ? {...s, optional:true, note:[s.note,'Optional this week: run it only if you have recovered well from the MP long run, otherwise make it an easy run.'].filter(Boolean).join(' ')} : s);
       if(phase==='Specific') specK++;
       // race week: race, shakeout the day before, rest the 2nd day before and after the race
       if(raceWeek){
@@ -1013,7 +1029,7 @@ ol.ex span.d{display:block;color:var(--muted)}
       const pick=P.swaps[key]; if(!pick||pick===s.autoBase) return;
       const alt=opts.find(o=>o.name===pick); if(!alt) return;
       const f=s.scaleF&&s.scaleF<1?s.scaleF:1;
-      wk.days[d]={...(f<1?scaleReps(alt,f):alt), autoBase:s.autoBase, opts:s.opts, swapped:true};
+      wk.days[d]={...(f<1?scaleReps(alt,f):alt), autoBase:s.autoBase, opts:s.opts, swapped:true, optional:s.optional, note:s.optional?s.note:alt.note};
     });
     for(const wk of weeks) wk.total=Math.round(wk.days.filter(Boolean).reduce((a,s)=>a+sessKm(s),0));
     if(usedExtra) warn.push(`A quality day fell on a rest day or the long run day, so ${DAYS[qd[qd.length-1]]} is used as a quality day in some weeks.`);
@@ -1106,7 +1122,7 @@ ol.ex span.d{display:block;color:var(--muted)}
     let h=`<section class="panel"><h3 style="margin-top:0">${RNAME[dist]} on ${fmtDay(PLAN.race)}: ${nW} weeks, ${sum} km</h3>
       <p class="hint" style="margin:0 0 10px">Base ${PLAN.base} · transition ${PLAN.trans} · specific ${PLAN.spec} · taper ${PLAN.taper} weeks. Paces from VDOT ${S.vd.toFixed(1)}; race pace ${mmss(u(R(+dist)))}${uLbl()}. Every 4th week is lighter. 3 sub-threshold days need 50+ km a week.</p>
       ${(()=>{ const rg=ph=>{ const ps=weeks.filter(w=>ph.includes(w.phase)).map(w=>qStats(w.days).pc); return ps.length ? (Math.min(...ps)===Math.max(...ps) ? `${ps[0]}%` : `${Math.min(...ps)}–${Math.max(...ps)}%`) : '–'; };
-        return `<p class="hint" style="margin:0 0 10px">Quality work is the time in the work reps and MP blocks, not warm-ups or recoveries, as a share of the week's running time. Base and transition: ${Q_AIM[0]}–${Q_AIM[1]}% (this plan ${rg(['Base','Transition'])}). Specific phase: one race-specific session a week (for a marathon, the MP long run) plus 1 or 2 sub-threshold sessions, at most ${Q_CAP}% (this plan ${rg(['Specific'])}). Over the limit, sub-threshold sessions are shortened first, then one is dropped: base weeks go from 3 to 2 sub-threshold days, specific weeks from 2 to 1. The race-specific session stays whole.</p>`; })()}
+        return `<p class="hint" style="margin:0 0 10px">Quality work is the time in the work reps and MP blocks, not warm-ups or recoveries, as a share of the week's running time. Base and transition: ${Q_AIM[0]}–${Q_AIM[1]}% (this plan ${rg(['Base','Transition'])}). Specific phase: one race-specific session a week (for a marathon, the MP long run) plus 1 or 2 sub-threshold sessions, at most ${Q_CAP}% (this plan ${rg(['Specific'])}). A 5K week under ${Q_AIM[0]}% gets Bakken 45/15s as a short extra sub-threshold session. In a low-volume marathon plan that stays over ${Q_CAP}%, the sub-threshold session is marked optional: run it only if you have recovered from the MP long run. Over the limit, sub-threshold sessions are shortened first, then one is dropped: base weeks go from 3 to 2 sub-threshold days, specific weeks from 2 to 1. The race-specific session stays whole.</p>`; })()}
       ${PLAN.warn.length?`<p class="pwarn">${PLAN.warn.map(esc).join(' ')}</p>`:''}
       <div class="vbars">${weeks.map(w=>`<div class="vb" title="Week ${w.w+1}: ${w.total} km" style="--h:${Math.round(w.total/mx*100)}%;--dot:var(${phaseCol[w.phase]})"><span>${w.total}</span></div>`).join('')}</div>
       <div class="vleg">${Object.entries(phaseCol).map(([k,c])=>`<span style="--dot:var(${c})"><i></i>${k}</span>`).join('')}</div></section>`;
@@ -1119,9 +1135,9 @@ ol.ex span.d{display:block;color:var(--muted)}
         const hrs=hr[s.hr]?hr[s.hr]():'';
         const cur=s.base||s.name;
         const title = s.opts&&s.opts.length>1
-          ? `<select class="swap" data-date="${ymd(date)}" data-auto="${esc(s.autoBase)}" aria-label="Session on ${fmtDay(date)}">${s.opts.map(o=>`<option value="${esc(o.v)}"${o.v===cur?' selected':''}>${esc(o.l)}${o.v===s.autoBase?' (plan)':''}</option>`).join('')}</select>${s.name!==cur?` <span class="hint">shortened to ${esc(shown(s))} this week</span>`:''}`
+          ? `<select class="swap" data-date="${ymd(date)}" data-auto="${esc(s.autoBase)}" aria-label="Session on ${fmtDay(date)}">${s.opts.map(o=>`<option value="${esc(o.v)}"${o.v===cur?' selected':''}>${esc(o.l)}${o.v===s.autoBase?' (plan)':''}</option>`).join('')}</select>${s.name!==cur?` <span class="hint">${s.scaleF>1?'':'shortened to '}${esc(shown(s))} this week</span>`:''}`
           : `<b>${esc(shown(s))}</b>`;
-        h+=`<div class="pday${s.kind==='race'?' race':''}${s.swapped?' swapped':''}"><span class="pd">${fmtDay(date)}</span><div><span class="ptype" style="--dot:var(${typeOf(s)[1]})">${typeOf(s)[0]}</span>${title} <span class="hint">· ${km} km</span>
+        h+=`<div class="pday${s.kind==='race'?' race':''}${s.swapped?' swapped':''}"><span class="pd">${fmtDay(date)}</span><div><span class="ptype" style="--dot:var(${typeOf(s)[1]})">${typeOf(s)[0]}</span>${title}${s.optional?' <span class="tag" style="margin:0">optional</span>':''} <span class="hint">· ${km} km</span>
           <div class="hint">${planWork(s)?`<b>${Math.round(planWork(s)/60)} min work</b> · `:''}${pace}${hrs?` · HR ${hrs}`:''}${s.note?` · ${esc(s.note)}`:''}</div>
           ${s.kind!=='easy'&&s.kind!=='long'?`<details class="wtxt"><summary>Workout text</summary><pre>${esc(workoutText(s))}</pre></details>`:''}</div></div>`;
       });
@@ -1139,7 +1155,7 @@ ol.ex span.d{display:block;color:var(--muted)}
     const L=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Run2Plan//Training plan//EN','CALSCALE:GREGORIAN',`X-WR-CALNAME:Run2Plan ${RNAME[PLAN.dist]}`];
     for(const wk of PLAN.weeks) wk.days.forEach((s,d)=>{
       if(!s) return; const date=addD(wk.start,d), km=sessKm(s);
-      const ty=typeOf(s)[0], title=(/^(Easy|Long run|Race)/.test(ty) ? shown(s) : `${ty}: ${shown(s)}`)+` (${km} km)`;
+      const ty=typeOf(s)[0], title=(/^(Easy|Long run|Race)/.test(ty) ? shown(s) : `${ty}: ${shown(s)}`)+` (${km} km)`+(s.optional?' (optional)':'');
       const desc=`${workoutText(s)}\n\nWeek ${wk.w+1}, ${wk.phase}. Run2Plan`;
       L.push('BEGIN:VEVENT',`UID:run2plan-${PLAN.dist}-${ymd(PLAN.race)}-${c(date)}`,`DTSTAMP:${stamp}`,`DTSTART;VALUE=DATE:${c(date)}`,`DTEND;VALUE=DATE:${c(addD(date,1))}`,`SUMMARY:${icsEsc(title)}`,`DESCRIPTION:${icsEsc(desc)}`,'TRANSP:TRANSPARENT','END:VEVENT');
     });
