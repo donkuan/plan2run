@@ -958,9 +958,11 @@ ol.ex span.d{display:block;color:var(--muted)}
       // shorten sessions to fit; in the specific phase the race-specific session stays whole
       // specific phase: each sub-threshold session at most about 20 min of work (two short ones beat one long one next to the race-specific work)
       for(let i=0;i<Q.length;i++){ if(Q[i].kind!=='iv' || (phase==='Specific' && Q[i].cat==='race')) continue;
-        let g = phase==='Specific' && Q[i].cat==='subt' ? Math.min(f, 1260/planWork(Q[i])) : f;
-        // longer (f above 1) only for sub-threshold sessions, up to 40 min of work
-        if(g>1) g = Q[i].cat==='subt' ? Math.max(1, Math.min(g, 2400/planWork(Q[i]))) : 1;
+        // specific phase: sub-threshold sessions start at about 20 min of work; f above 1 grows them from there.
+        // Longer (f above 1) is only for sub-threshold sessions, up to 40 min of work
+        const w0=planWork(Q[i]); let g;
+        if(phase==='Specific' && Q[i].cat==='subt') g = f<=1 ? Math.min(f, 1260/w0) : Math.min(1260/w0*f, 2400/w0);
+        else { g=f; if(g>1) g = Q[i].cat==='subt' ? Math.max(1, Math.min(g, 2400/w0)) : 1; }
         if(g!==1) Q[i]={...scaleReps(Q[i],g), note:Q[i].note}; }
       const q=qAll.slice(0,nq);
       // specific phase with a hard long run (marathon, half): rest the day after, easy the day after that,
@@ -1061,11 +1063,11 @@ ol.ex span.d{display:block;color:var(--muted)}
       // 5K: under 20%, top up with Bakken 45/15s (as many reps as fit under the limit)
       if(phase==='Specific' && dist==='5000' && share(days)<Q_AIM[0]/100)
         for(const n of [30,25,20,15,10]){ const d2=make(tt[0],tt[1],n); if(fits(d2)){ days=d2; tt=[tt[0],tt[1],n]; break; } }
-      // still under 20%: first longer sub-threshold sessions (up to 40 min of work; not in the specific phase, where they stay
-      // about 20 min), then double sub-threshold days (a morning and an evening session of 20-30 min each)
+      // still under 20%: first longer sub-threshold sessions (up to 40 min of work, also in the specific phase, where the
+      // race-specific session or hard long run stays as it is), then double sub-threshold days (morning and evening, 20-30 min each)
       const low=ds=>share(ds)<Q_AIM[0]/100;
       if(phase!=='Taper' && low(days)){
-        if(phase!=='Specific') for(const g of [1.05,1.1,1.15,1.2,1.3,1.4,1.5,1.6,1.8,2,2.5,3]){ const d2=make(g,tt[1],tt[2]||0); if(!fits(d2)) break; days=d2; tt=[g,tt[1],tt[2]||0]; if(!low(days)) break; }
+        for(const g of [1.05,1.1,1.15,1.2,1.3,1.4,1.5,1.6,1.8,2,2.5,3]){ const d2=make(g,tt[1],tt[2]||0); if(!fits(d2)) break; days=d2; tt=[g,tt[1],tt[2]||0]; if(!low(days)) break; }
         if(low(days)) dbl: for(let nd=1; nd<=3; nd++) for(const ts of [1200,1500,1800]){ const d2=make(tt[0],tt[1],tt[2]||0,nd,ts); if(!fits(d2)) break dbl; days=d2; if(!low(days)) break dbl; }
       }
       // low-volume marathon: still over the limit with one short sub-threshold session, so that session is optional
@@ -1219,7 +1221,7 @@ ol.ex span.d{display:block;color:var(--muted)}
     let h=`<section class="panel"><h3 style="margin-top:0">${RNAME[dist]} on ${fmtDay(PLAN.race)}: ${nW} weeks, ${sum} km</h3>
       <p class="hint" style="margin:0 0 10px">Base ${PLAN.base} · transition ${PLAN.trans} · specific ${PLAN.spec} · taper ${PLAN.taper} weeks. Paces from VDOT ${S.vd.toFixed(1)}; race pace ${mmss(u(R(+dist)))}${uLbl()}. Volume grows ${PLAN.incP}% a week from ${PLAN.cur} km to a peak of ${peak} km; every 4th week is lighter. 3 sub-threshold days need 50+ km a week.</p>
       ${(()=>{ const rg=ph=>{ const ps=weeks.filter(w=>ph.includes(w.phase)).map(w=>qStats(w.days).pc); return ps.length ? (Math.min(...ps)===Math.max(...ps) ? `${ps[0]}%` : `${Math.min(...ps)}–${Math.max(...ps)}%`) : '–'; };
-        return `<p class="hint" style="margin:0 0 10px">Quality work is the time in the work reps and MP blocks, not warm-ups or recoveries, as a share of the week's running time. Base and transition: ${Q_AIM[0]}–${Q_AIM[1]}% (this plan ${rg(['Base','Transition'])}). Specific phase: one race-specific session a week (for a marathon, the MP long run) plus 1 or 2 sub-threshold sessions, at most ${Q_CAP}% (this plan ${rg(['Specific'])}). A 5K week under ${Q_AIM[0]}% gets Bakken 45/15s as a short extra sub-threshold session. In a low-volume marathon plan that stays over ${Q_CAP}%, the sub-threshold session is marked optional: run it only if you have recovered from the MP long run. Over the limit, sub-threshold sessions are shortened first, then one is dropped: base weeks go from 3 to 2 sub-threshold days, specific weeks from 2 to 1 only when two sessions of about 20 minutes still do not fit. In the specific phase a sub-threshold session is at most about 20 minutes of work. The race-specific session stays whole. Under ${Q_AIM[0]}%, sub-threshold sessions get longer first (up to 40 minutes of work; in the specific phase they stay about 20), then sub-threshold days become double days: a morning and an evening session of 20–30 minutes each.</p>`; })()}
+        return `<p class="hint" style="margin:0 0 10px">Quality work is the time in the work reps and MP blocks, not warm-ups or recoveries, as a share of the week's running time. Base and transition: ${Q_AIM[0]}–${Q_AIM[1]}% (this plan ${rg(['Base','Transition'])}). Specific phase: one race-specific session a week (for a marathon, the MP long run) plus 1 or 2 sub-threshold sessions, at most ${Q_CAP}% (this plan ${rg(['Specific'])}). A 5K week under ${Q_AIM[0]}% gets Bakken 45/15s as a short extra sub-threshold session. In a low-volume marathon plan that stays over ${Q_CAP}%, the sub-threshold session is marked optional: run it only if you have recovered from the MP long run. Over the limit, sub-threshold sessions are shortened first, then one is dropped: base weeks go from 3 to 2 sub-threshold days, specific weeks from 2 to 1 only when two sessions of about 20 minutes still do not fit. In the specific phase a sub-threshold session is at most about 20 minutes of work. The race-specific session stays whole. Under ${Q_AIM[0]}%, sub-threshold sessions get longer first (up to 40 minutes of work, also in the specific phase, around an unchanged hard long run or race-specific session), then sub-threshold days become double days: a morning and an evening session of 20–30 minutes each.</p>`; })()}
       ${PLAN.warn.length?`<p class="pwarn">${PLAN.warn.map(esc).join(' ')}</p>`:''}
       <div class="vbars">${weeks.map(w=>`<div class="vb" title="Week ${w.w+1}: ${w.total} km" style="--h:${Math.round(w.total/mx*100)}%;--dot:var(${phaseCol[w.phase]})"><span>${w.total}</span></div>`).join('')}</div>
       <div class="vleg">${Object.entries(phaseCol).map(([k,c])=>`<span style="--dot:var(${c})"><i></i>${k}</span>`).join('')}</div></section>`;
