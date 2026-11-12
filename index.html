@@ -81,6 +81,7 @@ fieldset.cset legend{font-weight:700;padding:0 6px}
 .csum .warn{color:var(--c-vo2)}
 .pgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:10px}
 .pgrid label{display:grid;gap:4px;min-width:0}
+.pgrid{align-items:end}.pgrid+.pgrid{margin-top:10px}
 input[type=date]{-webkit-appearance:none;appearance:none;display:block;max-width:100%;min-height:40px;line-height:1.3}
 input[type=date]::-webkit-date-and-time-value{text-align:left}
 .restpick{margin-top:12px}
@@ -311,14 +312,18 @@ ol.ex span.d{display:block;color:var(--muted)}
         <label class="hint">Plan starts (week of)<input type="date" id="pStart" data-k="start"></label>
         <label class="hint">Runs per week<select id="pRuns" data-k="runs"><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option></select></label>
         <label class="hint">Current km per week<input type="number" id="pCur" data-k="cur" min="10" max="250" step="1"></label>
-        <label class="hint">Current long run (km)<input type="number" id="pLr" data-k="lr" min="0" max="40" step="0.5" inputmode="decimal" placeholder="auto"></label>
-        <label class="hint">Long run increase % (max 10 advised)<input type="number" id="pLri" data-k="lri" min="0" max="20" step="1" inputmode="decimal"></label>
         <label class="hint">Weekly increase % (max 10 advised)<input type="number" id="pInc" data-k="inc" min="0" max="20" step="1" inputmode="decimal"></label>
+      </div>
+      <div class="pgrid">
         <label class="hint">Sub-threshold days<select id="pSub" data-k="sub"><option value="2">2 a week</option><option value="3">3 a week (NSM)</option></select></label>
         <label class="hint">Quality days<select id="pQ" data-k="qdays"><option value="1,3,5">Tue · Thu · Sat</option><option value="0,2,4">Mon · Wed · Fri</option><option value="1,2,4">Tue · Wed · Fri</option><option value="1,3,6">Tue · Thu · Sun</option></select></label>
-        <label class="hint">Long run<select id="pLong" data-k="long"><option value="6">Sunday</option><option value="5">Saturday</option></select></label>
         <label class="hint">Warm-up (km)<input type="number" id="pWu" data-k="wu" min="0" max="10" step="0.5" inputmode="decimal"></label>
         <label class="hint">Cool-down (km)<input type="number" id="pCd" data-k="cd" min="0" max="10" step="0.5" inputmode="decimal"></label>
+      </div>
+      <div class="pgrid">
+        <label class="hint">Long run day<select id="pLong" data-k="long"><option value="0">Monday</option><option value="1">Tuesday</option><option value="2">Wednesday</option><option value="3">Thursday</option><option value="4">Friday</option><option value="5">Saturday</option><option value="6">Sunday</option></select></label>
+        <label class="hint">Current long run (km)<input type="number" id="pLr" data-k="lr" min="0" max="40" step="0.5" inputmode="decimal" placeholder="auto"></label>
+        <label class="hint">Long run increase % (max 10 advised)<input type="number" id="pLri" data-k="lri" min="0" max="20" step="1" inputmode="decimal"></label>
       </div>
       <div class="restpick"><span class="hint">Rest days <span id="restHint">(none picked: the plan chooses)</span></span><div class="days" id="pRest" role="group" aria-label="Rest days"></div></div>
       <div class="pact"><button class="chip primary" id="pIcs" type="button">Download calendar (.ics)</button><span class="hint" id="pMsg"></span></div>
@@ -890,10 +895,12 @@ ol.ex span.d{display:block;color:var(--muted)}
     const peak=Math.max(...vol);
     for(let w=peakIdx+1;w<nW;w++) vol.push(Math.round(w===nW-1 ? peak*((isM||isHM)?0.45:0.6) : peak*0.7));
     const T_=templates(), longDay=+P.long;
-    let qd=P.qdays.split(',').map(Number).filter(d=>d!==longDay && !restSet.has(d));
+    // the quality-day patterns are set for a Sunday long run; another long run day moves the whole week with it
+    const rot=d=>(d+qShift(longDay)+7)%7;
+    let qd=P.qdays.split(',').map(Number).map(rot).filter(d=>d!==longDay && !restSet.has(d));
     const pickedQ=qd.length;
     // top up quality days that fell on a rest day: prefer days not next to another hard day
-    for(const strict of [true,false]) for(const d of [1,3,5,2,4,0,6]){
+    for(const strict of [true,false]) for(const d of [1,3,5,2,4,0,6].map(rot)){
       if(qd.length>=3) break;
       if(d===longDay||restSet.has(d)||qd.includes(d)) continue;
       if(strict && [...qd,longDay].some(x=>Math.abs(x-d)===1||Math.abs(x-d)===6)) continue;
@@ -921,7 +928,8 @@ ol.ex span.d{display:block;color:var(--muted)}
       // so the week stays close to the planned km instead of being pushed up by minimum session lengths
       const runsW=Math.min(runs, Math.max(3, Math.round(vol[w]/8)));
       const nSub = vol[w]<30 ? 1 : (+P.sub===3 && runsW>=5 && !deload && vol[w]>=50) ? 3 : 2;
-      const qAll=qd.slice(0, Math.min(nSub, Math.max(nSub===1?1:2, runsW-1))).sort((a,b)=>a-b);
+      // in pattern order, so with fewer sessions the days furthest from the long run stay
+      const qAll=qd.slice(0, Math.min(nSub, Math.max(nSub===1?1:2, runsW-1)));
       if(qAll.length>pickedQ) usedExtra=true;
       // one try at the week: f shortens the midweek quality sessions, nq is how many there are
       // (in the specific phase: how many sub-threshold sessions next to the one race-specific session)
@@ -966,7 +974,7 @@ ol.ex span.d{display:block;color:var(--muted)}
           subDays=picks;
         } else if(dist==='5000'){
           const free=d=>!restSet.has(d)&&d!==longDay;
-          let K=(longDay+2)%7; if(!free(K)) K=[1,2,3,0,4].find(d=>free(d)&&free((d+1)%7)) ?? K;
+          let K=(longDay+2)%7; if(!free(K)) K=[1,2,3,0,4].map(rot).find(d=>free(d)&&free((d+1)%7)) ?? K;
           const r1=(K+1)%7, e1=(K+2)%7, q1=[(K+3)%7,(K+4)%7].find(d=>free(d)&&d!==(longDay+6)%7) ?? (K+3)%7;
           raceDay=K; subDays=[q1]; forceRest.add(r1); mustEasy=(restSet.has(e1)||e1===longDay)?null:e1;
         } else { raceDay=qAll.length>1?qAll[1]:qAll[0]; subDays=qAll.filter(d=>d!==raceDay); }
@@ -993,7 +1001,7 @@ ol.ex span.d{display:block;color:var(--muted)}
       days[longDay]=L;
       // easy days
       const nEasy=Math.max(0, runsW - days.filter(Boolean).length);
-      const pref=[...(mustEasy!=null&&!days[mustEasy]?[mustEasy]:[]), ...[2,0,4,6,5,1,3].filter(d=>!days[d] && !restSet.has(d) && !forceRest.has(d) && d!==mustEasy)];
+      const pref=[...(mustEasy!=null&&!days[mustEasy]?[mustEasy]:[]), ...[2,0,4,6,5,1,3].map(rot).filter(d=>!days[d] && !restSet.has(d) && !forceRest.has(d) && d!==mustEasy)];
       // fewer runs than usual: spread the easy runs away from the quality days
       if(runsW<runs){ const hard=[0,1,2,3,4,5,6].filter(d=>days[d]&&days[d].kind!=='long'), nb=d=>hard.filter(x=>Math.abs(x-d)===1||Math.abs(x-d)===6).length;
         pref.sort((a,b)=>(a===mustEasy?-1:b===mustEasy?1:nb(a)-nb(b))); }
@@ -1177,8 +1185,12 @@ ol.ex span.d{display:block;color:var(--muted)}
     return ` · ${hmin(t)} running${q ? ` · <b>${Math.round(q/60)} min quality</b> = <span class="qp ${c}">${pc}%</span>` : ''}`;
   }
   let PLAN=null;
+  // quality days move with the long run day (the patterns are set for a Sunday long run)
+  function qShift(L){ return L-6; }
   function renderPlan(){
     const out=$('planOut'); if(!out) return;
+    const qs=qShift(+S.plan.long);
+    [...$('pQ').options].forEach(o=>{ o.textContent=o.value.split(',').map(d=>(+d+qs+7)%7).sort((a,b)=>a-b).map(d=>DAYS[d]).join(' · '); });
     PLAN=buildPlan();
     if(PLAN.err){ out.innerHTML=`<p class="err panel">${esc(PLAN.err)}</p>`; $('pIcs').disabled=true; return; }
     $('pIcs').disabled=false;
