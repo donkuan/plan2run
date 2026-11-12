@@ -849,7 +849,7 @@ ol.ex span.d{display:block;color:var(--muted)}
     }
     if(s.kind==='seg') return r05(s.segs.reduce((a,x)=>a+x[0],0)/1000);
     if(s.kind==='blk') return r05(s.steps.reduce((a,x)=>a+x.t/midP(x.pace),0));
-    return s.km||0;
+    return (s.km||0)+(s.second||0);
   }
   // shorten a session: fewer reps, or shorter reps once it is down to 2 (2 × 8 km becomes 2 × 5 km)
   const scaleReps = (s,f) => {
@@ -904,6 +904,8 @@ ol.ex span.d{display:block;color:var(--muted)}
     for(let w=0;w<nW;w++){
       // lighter weeks only in base and transition, so the race-specific long runs are never cut
       const phase=phaseOf(w), deload=(w+1)%4===0 && w<base+trans;
+      // taper from the volume the plan actually reached, not the target it could not hold
+      if(w>peakIdx){ const held=Math.max(...weeks.map(x=>x.days.reduce((a,s)=>a+(s?sessKm(s):0),0))); vol[w]=Math.min(vol[w], Math.round(held*(w===nW-1?((isM||isHM)?0.45:0.6):0.7))); }
       const ws=addD(start,7*w), raceWeek=w===nW-1;
       // low weekly volume: fewer runs (about 8 km each, at least 3) and below 30 km one quality session,
       // so the week stays close to the planned km instead of being pushed up by minimum session lengths
@@ -984,8 +986,24 @@ ol.ex span.d{display:block;color:var(--muted)}
         pref.sort((a,b)=>(a===mustEasy?-1:b===mustEasy?1:nb(a)-nb(b))); }
       const easyDays=pref.slice(0,nEasy).sort((a,b)=>a-b);
       const used=days.filter(Boolean).reduce((a,s)=>a+sessKm(s),0);
-      const ek=nEasy? Math.min(16, Math.max(vol[w]<30?4:5, (vol[w]-used)/nEasy)) : 0;
-      easyDays.forEach((d,i)=>{ days[d]=easy(ek, i===0 && phase!=='Taper' ? '6 × 20 s strides' : null); });
+      // easy runs: at most 60 min, one a week up to 75 min; whatever the week still needs becomes a short second run (a double)
+      const ep=midP(E), k60=3600/ep, k75=4500/ep, k40=2400/ep, need=vol[w]-used, mn=vol[w]<30?4:5;
+      const ekm=easyDays.map(()=>Math.max(mn, nEasy?need/nEasy:0));
+      let over=0;
+      if(nEasy && need>nEasy*k60){
+        ekm.fill(k60);
+        let big=easyDays.length-1; for(let i=easyDays.length-1;i>=0;i--) if(easyDays[i]!==mustEasy){ big=i; break; }
+        ekm[big]=Math.min(k75, need-(nEasy-1)*k60);
+        over=need-ekm.reduce((a,b)=>a+b,0);
+      }
+      const sec=easyDays.map(()=>0);
+      if(over>=3){
+        // second runs on the 60-minute days first, never on the easy day after a hard long run
+        const order=easyDays.map((d,i)=>i).filter(i=>easyDays[i]!==mustEasy).sort((a,b)=>ekm[a]-ekm[b]);
+        const nd=Math.min(order.length, Math.ceil(over/k40));
+        order.slice(0,nd).forEach(i=>sec[i]=Math.max(4, Math.min(k40, over/nd)));
+      }
+      easyDays.forEach((d,i)=>{ days[d]=easy(ekm[i], i===0 && phase!=='Taper' ? '6 × 20 s strides' : null); if(sec[i]) days[d].second=r05(sec[i]); });
       return days;
       };
       // quality work as a share of running time: at most 25%. Over it: shorten the sessions, then use fewer of them
@@ -1049,6 +1067,8 @@ ol.ex span.d{display:block;color:var(--muted)}
     if(usedExtra) warn.push(`A quality day fell on a rest day or the long run day, so ${DAYS[qd[qd.length-1]]} is used as a quality day in some weeks.`);
     // the runs a week cap what the plan can hold (easy runs up to 16 km): say so when the build outgrows them
     const held=Math.max(...weeks.slice(0,peakIdx+1).map(w=>w.total));
+    const nDbl=weeks.filter(w=>w.days.some(s=>s&&s.second)).length;
+    if(nDbl) warn.push(`Easy runs are capped at 60 minutes (one a week up to 75), so ${nDbl} ${nDbl>1?'weeks need':'week needs'} a short second easy run on some days to reach the planned km.${runs<7?` Rather run once a day? Remove a rest day and add a run a week.`:''}`);
     if(held<peak*0.9) warn.push(`Growing ${incP}% a week would reach ${peak} km, but ${runs} runs a week top out around ${held} km, so the plan levels off there. Add runs or lower the increase.`);
     return {weeks, nW, base, trans, spec, taper, dist, race, peak:Math.min(peak,held), cur, incP, warn};
   }
@@ -1077,6 +1097,7 @@ ol.ex span.d{display:block;color:var(--muted)}
       L.push(`- ${dStr(s.km*1000)} ${pStr(s.pace)}`);
     } else {
       L.push(`- ${dStr(s.km*1000)} ${pStr(E)}`);
+      if(s.second) L.push('',`Second run (later in the day): ${s.second} km easy`);
       if(s.strides){ const n=/^\d+/.exec(s.name.split('+ ')[1]||'')?.[0]||6; L.push('',`Strides ${n}x`,`- 20s ${pStr([R(1500)-5,R(1500)+5])}`,'- Walk 40s'); }
     }
     const hrs=hr[s.hr]?hr[s.hr]():''; const notes=[]; if(hrs) notes.push(`HR ${hrs}`); if(s.note) notes.push(s.note);
@@ -1089,7 +1110,7 @@ ol.ex span.d{display:block;color:var(--muted)}
     if(!s) return ['Rest','--muted'];
     if(s.kind==='race') return ['Race','--c-vo2'];
     if(s.kind==='blk') return ['Taper sub-threshold','--c-subt'];
-    if(s.kind==='easy') return [s.strides?'Easy + strides':'Easy','--c-sup'];
+    if(s.kind==='easy') return [s.second?'Easy double':s.strides?'Easy + strides':'Easy','--c-sup'];
     if(s.kind==='long') return ['Long run','--c-sup'];
     if(s.cat==='mlong') return ['MP long run','--c-race'];
     if(s.kind==='seg') return ['Long run + MP','--c-race'];
@@ -1100,7 +1121,7 @@ ol.ex span.d{display:block;color:var(--muted)}
   }
   function weekSummary(days){
     const n={}; days.forEach(s=>{ if(!s) return; const t=typeOf(s)[0].replace(' + strides',''); n[t]=(n[t]||0)+1; });
-    const order=['Sub-threshold','Taper sub-threshold','VO2max','Race-specific','Race pace','MP long run','Long run + MP','Long run','Easy','Race'];
+    const order=['Sub-threshold','Taper sub-threshold','VO2max','Race-specific','Race pace','MP long run','Long run + MP','Long run','Easy','Easy double','Race'];
     return order.filter(k=>n[k]).map(k=>`${n[k]>1?n[k]+' × ':''}${k.toLowerCase().replace('vo2max','VO2max').replace(/\bmp\b/,'MP')}`).join(' · ');
   }
   function planWork(s){
@@ -1118,7 +1139,7 @@ ol.ex span.d{display:block;color:var(--muted)}
     if(s.kind==='seg') return s.segs.reduce((a,[m,p])=>a+m*midP(p)/1000,0);
     if(s.kind==='blk') return s.steps.reduce((a,x)=>a+x.t,0);
     if(s.kind==='race') return s.km*midP(s.pace);
-    return (s.km||0)*e;
+    return ((s.km||0)+(s.second||0))*e;
   }
   // quality work as a share of the week's running time: aim 20-25% in base and transition, at most 25% in the specific phase too
   const Q_AIM=[20,25], Q_CAP=25;
@@ -1156,7 +1177,7 @@ ol.ex span.d{display:block;color:var(--muted)}
           ? `<select class="swap" data-date="${ymd(date)}" data-auto="${esc(s.autoBase)}" aria-label="Session on ${fmtDay(date)}">${s.opts.map(o=>`<option value="${esc(o.v)}"${o.v===cur?' selected':''}>${esc(o.l)}${o.v===s.autoBase?' (plan)':''}</option>`).join('')}</select>${s.name!==cur?` <span class="hint">${s.scaleF>1?'':'shortened to '}${esc(shown(s))} this week</span>`:''}`
           : `<b>${esc(shown(s))}</b>`;
         h+=`<div class="pday${s.kind==='race'?' race':''}${s.swapped?' swapped':''}"><span class="pd">${fmtDay(date)}</span><div><span class="ptype" style="--dot:var(${typeOf(s)[1]})">${typeOf(s)[0]}</span>${title}${s.optional?' <span class="tag" style="margin:0">optional</span>':''} <span class="hint">· ${km} km</span>
-          <div class="hint">${planWork(s)?`<b>${Math.round(planWork(s)/60)} min work</b> · `:''}${s.kind==='iv'&&(WU()||CD())?`${WU()} km warm-up, ${CD()} km cool-down · `:''}${pace}${hrs?` · HR ${hrs}`:''}${s.note?` · ${esc(s.note)}`:''}</div>
+          <div class="hint">${planWork(s)?`<b>${Math.round(planWork(s)/60)} min work</b> · `:''}${s.kind==='iv'&&(WU()||CD())?`${WU()} km warm-up, ${CD()} km cool-down · `:''}${s.second?`<b>${s.km} km + second run ${s.second} km</b> later in the day · `:''}${pace}${hrs?` · HR ${hrs}`:''}${s.note?` · ${esc(s.note)}`:''}</div>
           ${s.kind!=='easy'&&s.kind!=='long'?`<details class="wtxt"><summary>Workout text</summary><pre>${esc(workoutText(s))}</pre></details>`:''}</div></div>`;
       });
       h+='</section>';
