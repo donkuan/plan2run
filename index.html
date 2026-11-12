@@ -311,7 +311,7 @@ ol.ex span.d{display:block;color:var(--muted)}
         <label class="hint">Plan starts (week of)<input type="date" id="pStart" data-k="start"></label>
         <label class="hint">Runs per week<select id="pRuns" data-k="runs"><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option></select></label>
         <label class="hint">Current km per week<input type="number" id="pCur" data-k="cur" min="10" max="250" step="1"></label>
-        <label class="hint">Peak km per week<input type="number" id="pPeak" data-k="peak" min="10" max="250" step="1"></label>
+        <label class="hint">Weekly increase % (max 10 advised)<input type="number" id="pInc" data-k="inc" min="0" max="20" step="1" inputmode="decimal"></label>
         <label class="hint">Sub-threshold days<select id="pSub" data-k="sub"><option value="2">2 a week</option><option value="3">3 a week (NSM)</option></select></label>
         <label class="hint">Quality days<select id="pQ" data-k="qdays"><option value="1,3,5">Tue · Thu · Sat</option><option value="0,2,4">Mon · Wed · Fri</option><option value="1,2,4">Tue · Wed · Fri</option><option value="1,3,6">Tue · Thu · Sun</option></select></label>
         <label class="hint">Long run<select id="pLong" data-k="long"><option value="6">Sunday</option><option value="5">Saturday</option></select></label>
@@ -323,7 +323,7 @@ ol.ex span.d{display:block;color:var(--muted)}
       <details class="hint pinfo"><summary>Getting it into Intervals.icu, Google, Apple or Outlook</summary>
         <p><b>Google, Apple or Outlook calendar:</b> import the .ics file. Each run becomes an all-day event with the workout and paces in the description.</p>
         <p><b>Intervals.icu:</b> it adds calendars by web address, not by file. Upload the .ics to your GitHub repository (for example as plan.ics), then in Intervals.icu add a calendar with that address (yourname.github.io/your-repo/plan.ics). Intervals.icu reads the workout text in each description, so the sessions arrive as structured workouts with paces that can sync to your watch. To add a single session instead, open “Workout text” under it and paste it into the Intervals.icu workout builder.</p>
-        <p>A quality day that clashes with the long run day is dropped. Check the plan before a big change in volume: it ramps at most 10% a week towards your peak.</p>
+        <p>A quality day that clashes with the long run day is dropped. Volume grows by your weekly increase from your current km; every 4th week in base and transition is 20% lighter, and the build continues from where it was. More than 10% a week raises the injury risk.</p>
       </details>
     </section>
     <div id="planOut" class="tabpane"></div>
@@ -743,7 +743,7 @@ ol.ex span.d{display:block;color:var(--muted)}
   const monday = d => addD(d, -((d.getDay()+6)%7));
   const fmtDay = d => `${DAYS[(d.getDay()+6)%7]} ${d.getDate()} ${d.toLocaleDateString('en-GB',{month:'short'})}`;
   const today0 = () => { const n=new Date(); return new Date(n.getFullYear(),n.getMonth(),n.getDate()); };
-  S.plan=Object.assign({dist:'42195', race:'', start:'', runs:'5', cur:'50', peak:'80', sub:'3', long:'6', qdays:'1,3,5', rest:'', wu:'3', cd:'2'}, S.plan||{});
+  S.plan=Object.assign({dist:'42195', race:'', start:'', runs:'5', cur:'50', inc:'5', sub:'3', long:'6', qdays:'1,3,5', rest:'', wu:'3', cd:'2'}, S.plan||{});
   if(!S.plan.swaps||typeof S.plan.swaps!=='object') S.plan.swaps={};
   if(!parseYmd(S.plan.start)) S.plan.start=ymd(addD(monday(today0()),7));
   if(!parseYmd(S.plan.race)) S.plan.race=ymd(addD(parseYmd(S.plan.start),7*15+6));
@@ -872,20 +872,21 @@ ol.ex span.d{display:block;color:var(--muted)}
     const longDay0=+P.long, restSet=new Set((P.rest||'').split(',').filter(x=>x!=='').map(Number).filter(d=>d!==longDay0));
     const avail=7-restSet.size, warn=[];
     if(+P.runs>avail) warn.push(`${restSet.size} rest days leave room for ${avail} runs a week, so the plan uses ${avail} instead of ${P.runs}.`);
-    const runs=Math.min(avail,Math.min(7,Math.max(3,+P.runs||5))), cur=Math.max(10,+P.cur||40), peak=Math.max(cur,+P.peak||cur);
+    const runs=Math.min(avail,Math.min(7,Math.max(3,+P.runs||5))), cur=Math.max(10,+P.cur||40), incP=(x=>isNaN(x)?5:Math.min(20,Math.max(0,x)))(parseFloat(String(P.inc??'').replace(',','.'))), inc=incP/100;
+    if(incP>10) warn.push(`A weekly increase of ${incP}% is more than the advised 10%: watch for niggles and take the lighter weeks seriously.`);
     const taper=(isM||isHM)?2:1, spec=Math.min(4,nW-taper-2), trans=nW>=10?2:1, base=nW-taper-spec-trans;
     const phaseOf=w=> w<base?'Base': w<base+trans?'Transition': w<base+trans+spec?'Specific': 'Taper';
     const peakIdx=nW-taper-1;
-    // weekly volume: ramp to peak by the last specific week, max +10%/week, every 4th week -20%
+    // weekly volume: grows by your weekly increase up to the last specific week (at most 250 km);
+    // every 4th week in base and transition is 20% lighter and the build carries on from the week before it
     const vol=[]; let prev=cur;
-    for(let w=0;w<nW;w++){
-      if(w<=peakIdx){
-        const target=cur+(peak-cur)*(w/Math.max(1,peakIdx));
-        const v=Math.min(target, prev*1.1);
-        const deload=(w+1)%4===0 && w<base+trans;
-        vol.push(Math.round(deload ? v*0.8 : v)); if(!deload) prev=v;
-      } else vol.push(Math.round(w===nW-1 ? peak*((isM||isHM)?0.45:0.6) : peak*0.7));
+    for(let w=0;w<=peakIdx;w++){
+      const v=w===0 ? cur : Math.min(250, prev*(1+inc));
+      const deload=(w+1)%4===0 && w<base+trans;
+      vol.push(Math.round(deload ? v*0.8 : v)); if(!deload) prev=v;
     }
+    const peak=Math.max(...vol);
+    for(let w=peakIdx+1;w<nW;w++) vol.push(Math.round(w===nW-1 ? peak*((isM||isHM)?0.45:0.6) : peak*0.7));
     const T_=templates(), longDay=+P.long;
     let qd=P.qdays.split(',').map(Number).filter(d=>d!==longDay && !restSet.has(d));
     const pickedQ=qd.length;
@@ -1046,7 +1047,10 @@ ol.ex span.d{display:block;color:var(--muted)}
     });
     for(const wk of weeks) wk.total=Math.round(wk.days.filter(Boolean).reduce((a,s)=>a+sessKm(s),0));
     if(usedExtra) warn.push(`A quality day fell on a rest day or the long run day, so ${DAYS[qd[qd.length-1]]} is used as a quality day in some weeks.`);
-    return {weeks, nW, base, trans, spec, taper, dist, race, peak, warn};
+    // the runs a week cap what the plan can hold (easy runs up to 16 km): say so when the build outgrows them
+    const held=Math.max(...weeks.slice(0,peakIdx+1).map(w=>w.total));
+    if(held<peak*0.9) warn.push(`Growing ${incP}% a week would reach ${peak} km, but ${runs} runs a week top out around ${held} km, so the plan levels off there. Add runs or lower the increase.`);
+    return {weeks, nW, base, trans, spec, taper, dist, race, peak:Math.min(peak,held), cur, incP, warn};
   }
 
   // Intervals.icu workout text (absolute paces in /km)
@@ -1134,7 +1138,7 @@ ol.ex span.d{display:block;color:var(--muted)}
     const {weeks,nW,dist,peak}=PLAN, sum=weeks.reduce((a,w)=>a+w.total,0), mx=Math.max(...weeks.map(w=>w.total));
     const phaseCol={Base:'--c-subt',Transition:'--c-thr',Specific:'--c-race',Taper:'--c-vo2'};
     let h=`<section class="panel"><h3 style="margin-top:0">${RNAME[dist]} on ${fmtDay(PLAN.race)}: ${nW} weeks, ${sum} km</h3>
-      <p class="hint" style="margin:0 0 10px">Base ${PLAN.base} · transition ${PLAN.trans} · specific ${PLAN.spec} · taper ${PLAN.taper} weeks. Paces from VDOT ${S.vd.toFixed(1)}; race pace ${mmss(u(R(+dist)))}${uLbl()}. Every 4th week is lighter. 3 sub-threshold days need 50+ km a week.</p>
+      <p class="hint" style="margin:0 0 10px">Base ${PLAN.base} · transition ${PLAN.trans} · specific ${PLAN.spec} · taper ${PLAN.taper} weeks. Paces from VDOT ${S.vd.toFixed(1)}; race pace ${mmss(u(R(+dist)))}${uLbl()}. Volume grows ${PLAN.incP}% a week from ${PLAN.cur} km to a peak of ${peak} km; every 4th week is lighter. 3 sub-threshold days need 50+ km a week.</p>
       ${(()=>{ const rg=ph=>{ const ps=weeks.filter(w=>ph.includes(w.phase)).map(w=>qStats(w.days).pc); return ps.length ? (Math.min(...ps)===Math.max(...ps) ? `${ps[0]}%` : `${Math.min(...ps)}–${Math.max(...ps)}%`) : '–'; };
         return `<p class="hint" style="margin:0 0 10px">Quality work is the time in the work reps and MP blocks, not warm-ups or recoveries, as a share of the week's running time. Base and transition: ${Q_AIM[0]}–${Q_AIM[1]}% (this plan ${rg(['Base','Transition'])}). Specific phase: one race-specific session a week (for a marathon, the MP long run) plus 1 or 2 sub-threshold sessions, at most ${Q_CAP}% (this plan ${rg(['Specific'])}). A 5K week under ${Q_AIM[0]}% gets Bakken 45/15s as a short extra sub-threshold session. In a low-volume marathon plan that stays over ${Q_CAP}%, the sub-threshold session is marked optional: run it only if you have recovered from the MP long run. Over the limit, sub-threshold sessions are shortened first, then one is dropped: base weeks go from 3 to 2 sub-threshold days, specific weeks from 2 to 1. The race-specific session stays whole.</p>`; })()}
       ${PLAN.warn.length?`<p class="pwarn">${PLAN.warn.map(esc).join(' ')}</p>`:''}
