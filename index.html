@@ -937,7 +937,10 @@ ol.ex span.d{display:block;color:var(--muted)}
         Q.push(T_.sharpen[dist]);
       }
       // shorten sessions to fit; in the specific phase the race-specific session stays whole
-      if(f<1) for(let i=0;i<Q.length;i++) if(Q[i].kind==='iv' && !(phase==='Specific' && Q[i].cat==='race')) Q[i]={...scaleReps(Q[i],f), note:Q[i].note};
+      // specific phase: each sub-threshold session at most about 20 min of work (two short ones beat one long one next to the race-specific work)
+      for(let i=0;i<Q.length;i++){ if(Q[i].kind!=='iv' || (phase==='Specific' && Q[i].cat==='race')) continue;
+        const g = phase==='Specific' && Q[i].cat==='subt' ? Math.min(f, 1260/planWork(Q[i])) : f;
+        if(g<1) Q[i]={...scaleReps(Q[i],g), note:Q[i].note}; }
       const q=qAll.slice(0,nq);
       // specific phase with a hard long run (marathon, half): rest the day after, easy the day after that,
       // then the two quality days, keeping the day before the long run free of quality
@@ -1018,7 +1021,8 @@ ol.ex span.d{display:block;color:var(--muted)}
       const share=ds=>{ const t=ds.reduce((a,x)=>a+sessSec(x),0); return t ? ds.reduce((a,x)=>a+planWork(x),0)/t : 0; };
       const cap=Q_CAP/100, nq0=qAll.length;
       const tries = phase==='Taper' ? [[1,nq0]]
-        : phase==='Specific' ? [[1,2],[0.9,2],[0.8,2],[1,1],[0.9,1],[0.8,1],[0.7,1],[0.6,1],[0.5,1],[0.4,1], ...(vol[w]<30?[[1,0]]:[])]
+        // specific phase: rather two shorter sub-threshold sessions (down to about 20 min each) than one long one
+        : phase==='Specific' ? [[1,2],[0.9,2],[0.8,2],[0.7,2],[0.6,2],[0.5,2],[1,1],[0.9,1],[0.8,1],[0.7,1],[0.6,1],[0.5,1],[0.4,1], ...(vol[w]<30?[[1,0]]:[])]
         : [[1,nq0],[0.9,nq0],[0.8,nq0],[0.7,nq0], ...(nq0>2?[[1,2],[0.9,2],[0.8,2],[0.7,2]]:[]), [0.6,Math.min(2,nq0)], [0.5,1], [0.4,1]];
       // a week fits when quality is within the limit and the km stay close to the plan (minimum session lengths can push them up)
       const kmOf=ds=>ds.reduce((a,x)=>a+(x?sessKm(x):0),0), fits=ds=>share(ds)<=cap+0.004 && (phase==='Taper' || kmOf(ds)<=vol[w]*1.1+1);
@@ -1168,7 +1172,7 @@ ol.ex span.d{display:block;color:var(--muted)}
     let h=`<section class="panel"><h3 style="margin-top:0">${RNAME[dist]} on ${fmtDay(PLAN.race)}: ${nW} weeks, ${sum} km</h3>
       <p class="hint" style="margin:0 0 10px">Base ${PLAN.base} · transition ${PLAN.trans} · specific ${PLAN.spec} · taper ${PLAN.taper} weeks. Paces from VDOT ${S.vd.toFixed(1)}; race pace ${mmss(u(R(+dist)))}${uLbl()}. Volume grows ${PLAN.incP}% a week from ${PLAN.cur} km to a peak of ${peak} km; every 4th week is lighter. 3 sub-threshold days need 50+ km a week.</p>
       ${(()=>{ const rg=ph=>{ const ps=weeks.filter(w=>ph.includes(w.phase)).map(w=>qStats(w.days).pc); return ps.length ? (Math.min(...ps)===Math.max(...ps) ? `${ps[0]}%` : `${Math.min(...ps)}–${Math.max(...ps)}%`) : '–'; };
-        return `<p class="hint" style="margin:0 0 10px">Quality work is the time in the work reps and MP blocks, not warm-ups or recoveries, as a share of the week's running time. Base and transition: ${Q_AIM[0]}–${Q_AIM[1]}% (this plan ${rg(['Base','Transition'])}). Specific phase: one race-specific session a week (for a marathon, the MP long run) plus 1 or 2 sub-threshold sessions, at most ${Q_CAP}% (this plan ${rg(['Specific'])}). A 5K week under ${Q_AIM[0]}% gets Bakken 45/15s as a short extra sub-threshold session. In a low-volume marathon plan that stays over ${Q_CAP}%, the sub-threshold session is marked optional: run it only if you have recovered from the MP long run. Over the limit, sub-threshold sessions are shortened first, then one is dropped: base weeks go from 3 to 2 sub-threshold days, specific weeks from 2 to 1. The race-specific session stays whole.</p>`; })()}
+        return `<p class="hint" style="margin:0 0 10px">Quality work is the time in the work reps and MP blocks, not warm-ups or recoveries, as a share of the week's running time. Base and transition: ${Q_AIM[0]}–${Q_AIM[1]}% (this plan ${rg(['Base','Transition'])}). Specific phase: one race-specific session a week (for a marathon, the MP long run) plus 1 or 2 sub-threshold sessions, at most ${Q_CAP}% (this plan ${rg(['Specific'])}). A 5K week under ${Q_AIM[0]}% gets Bakken 45/15s as a short extra sub-threshold session. In a low-volume marathon plan that stays over ${Q_CAP}%, the sub-threshold session is marked optional: run it only if you have recovered from the MP long run. Over the limit, sub-threshold sessions are shortened first, then one is dropped: base weeks go from 3 to 2 sub-threshold days, specific weeks from 2 to 1 only when two sessions of about 20 minutes still do not fit. In the specific phase a sub-threshold session is at most about 20 minutes of work. The race-specific session stays whole.</p>`; })()}
       ${PLAN.warn.length?`<p class="pwarn">${PLAN.warn.map(esc).join(' ')}</p>`:''}
       <div class="vbars">${weeks.map(w=>`<div class="vb" title="Week ${w.w+1}: ${w.total} km" style="--h:${Math.round(w.total/mx*100)}%;--dot:var(${phaseCol[w.phase]})"><span>${w.total}</span></div>`).join('')}</div>
       <div class="vleg">${Object.entries(phaseCol).map(([k,c])=>`<span style="--dot:var(${c})"><i></i>${k}</span>`).join('')}</div></section>`;
