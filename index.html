@@ -852,7 +852,7 @@ ol.ex span.d{display:block;color:var(--muted)}
     if(s.kind==='iv'){
       const work = s.size.d ? s.size.d/1000 : s.size.t/midP(s.pace);
       const rec = s.rec.stand ? 0 : s.rec.d ? s.rec.d/1000 : s.rec.t/(midP(E)+(s.rec.float?0:30));
-      return r05(WU() + CD() + s.reps*work + Math.max(0,s.reps-1)*rec) + (s.am||0);
+      return r05(WU() + CD() + s.reps*work + Math.max(0,s.reps-1)*rec) + (s.am||0) + (s.pm?sessKm(s.pm):0);
     }
     if(s.kind==='seg') return r05(s.segs.reduce((a,x)=>a+x[0],0)/1000);
     if(s.kind==='blk') return r05(s.steps.reduce((a,x)=>a+x.t/midP(x.pace),0));
@@ -934,7 +934,8 @@ ol.ex span.d{display:block;color:var(--muted)}
       // one try at the week: f shortens the midweek quality sessions, nq is how many there are
       // (in the specific phase: how many sub-threshold sessions next to the one race-specific session)
       // b45n (5K specific phase): reps of Bakken 45/15s added as a short sub-threshold top-up
-      const make=(f,nq,b45n=0)=>{
+      // dbl: number of double sub-threshold days, dblT: work per session in seconds (20-30 min)
+      const make=(f,nq,b45n=0,dbl=0,dblT=1500)=>{
       const days=Array(7).fill(null);
       // quality sessions
       const Q=[];
@@ -957,8 +958,10 @@ ol.ex span.d{display:block;color:var(--muted)}
       // shorten sessions to fit; in the specific phase the race-specific session stays whole
       // specific phase: each sub-threshold session at most about 20 min of work (two short ones beat one long one next to the race-specific work)
       for(let i=0;i<Q.length;i++){ if(Q[i].kind!=='iv' || (phase==='Specific' && Q[i].cat==='race')) continue;
-        const g = phase==='Specific' && Q[i].cat==='subt' ? Math.min(f, 1260/planWork(Q[i])) : f;
-        if(g<1) Q[i]={...scaleReps(Q[i],g), note:Q[i].note}; }
+        let g = phase==='Specific' && Q[i].cat==='subt' ? Math.min(f, 1260/planWork(Q[i])) : f;
+        // longer (f above 1) only for sub-threshold sessions, up to 40 min of work
+        if(g>1) g = Q[i].cat==='subt' ? Math.max(1, Math.min(g, 2400/planWork(Q[i]))) : 1;
+        if(g!==1) Q[i]={...scaleReps(Q[i],g), note:Q[i].note}; }
       const q=qAll.slice(0,nq);
       // specific phase with a hard long run (marathon, half): rest the day after, easy the day after that,
       // then the two quality days, keeping the day before the long run free of quality
@@ -990,6 +993,15 @@ ol.ex span.d{display:block;color:var(--muted)}
           if(bd!=null && planned<runsW) days[bd]={...scaleReps(T_.b45,b45n/20), note:'Short sub-threshold top-up (Bakken): 45 s on, 15 s standing or walking. Start at 10–15K pace and work toward 3–5K pace over the weeks; it should feel easier than the other sessions.'};
         }
       } else q.forEach((d,i)=>{ if(Q[i]) days[d]={...Q[i]}; });
+      // double sub-threshold days: the session in the morning and a second one in the evening, each 20-30 min of work
+      if(dbl){
+        const toWork=(s,t)=>{ const wk=planWork(s); return wk ? {...scaleReps(s, t/wk), note:s.note} : s; };
+        [0,1,2,3,4,5,6].filter(d=>days[d]&&days[d].kind==='iv'&&days[d].cat==='subt').slice(0,dbl).forEach((d,i)=>{
+          const a=days[d], pool=[...T_.subShort,...T_.subLong], p0=pool[(w+i+1)%pool.length];
+          const pmT=(p0.base||p0.name)===(a.base||a.name) ? pool[(w+i+2)%pool.length] : p0;
+          days[d]={...toWork(a,dblT), pm:toWork(pmT,dblT), note:'Double threshold day: one session in the morning, the other in the evening; both controlled, the second no faster than the first.'};
+        });
+      }
       // long run
       let L;
       const longKm=Math.min(capL, longCap, Math.max(Math.min(10, r05(vol[w]*0.4)), r05(vol[w]*(isM?0.3:0.27))));
@@ -1019,7 +1031,7 @@ ol.ex span.d{display:block;color:var(--muted)}
       }
       // the extra running goes first into an easy morning run on the sub-threshold days (it primes the evening session
       // and keeps the days between sub-threshold sessions for recovery); only what is left becomes a second easy run
-      const subD=[0,1,2,3,4,5,6].filter(d=>days[d]&&days[d].kind==='iv'&&days[d].cat==='subt');
+      const subD=[0,1,2,3,4,5,6].filter(d=>days[d]&&days[d].kind==='iv'&&days[d].cat==='subt'&&!days[d].pm);
       if(over>=3 && subD.length){
         const nd=Math.min(subD.length, Math.ceil(over/k40)), x=Math.max(4, Math.min(k40, over/nd));
         subD.slice(0,nd).forEach(d=>{ days[d]={...days[d], am:r05(x)}; over-=r05(x); });
@@ -1048,7 +1060,14 @@ ol.ex span.d{display:block;color:var(--muted)}
       for(const t of tries){ tt=t; days=make(...t); if(fits(days)) break; }
       // 5K: under 20%, top up with Bakken 45/15s (as many reps as fit under the limit)
       if(phase==='Specific' && dist==='5000' && share(days)<Q_AIM[0]/100)
-        for(const n of [30,25,20,15,10]){ const d2=make(tt[0],tt[1],n); if(fits(d2)){ days=d2; break; } }
+        for(const n of [30,25,20,15,10]){ const d2=make(tt[0],tt[1],n); if(fits(d2)){ days=d2; tt=[tt[0],tt[1],n]; break; } }
+      // still under 20%: first longer sub-threshold sessions (up to 40 min of work; not in the specific phase, where they stay
+      // about 20 min), then double sub-threshold days (a morning and an evening session of 20-30 min each)
+      const low=ds=>share(ds)<Q_AIM[0]/100;
+      if(phase!=='Taper' && low(days)){
+        if(phase!=='Specific') for(const g of [1.05,1.1,1.15,1.2,1.3,1.4,1.5,1.6,1.8,2,2.5,3]){ const d2=make(g,tt[1],tt[2]||0); if(!fits(d2)) break; days=d2; tt=[g,tt[1],tt[2]||0]; if(!low(days)) break; }
+        if(low(days)) dbl: for(let nd=1; nd<=3; nd++) for(const ts of [1200,1500,1800]){ const d2=make(tt[0],tt[1],tt[2]||0,nd,ts); if(!fits(d2)) break dbl; days=d2; if(!low(days)) break dbl; }
+      }
       // low-volume marathon: still over the limit with one short sub-threshold session, so that session is optional
       if(phase==='Specific' && isM && share(days)>cap+0.004)
         days=days.map(s=>s&&s.cat==='subt' ? {...s, optional:true, note:[s.note,'Optional this week: run it only if you have recovered well from the MP long run, otherwise make it an easy run.'].filter(Boolean).join(' ')} : s);
@@ -1095,7 +1114,7 @@ ol.ex span.d{display:block;color:var(--muted)}
       const pick=P.swaps[key]; if(!pick||pick===s.autoBase) return;
       const alt=opts.find(o=>o.name===pick); if(!alt) return;
       const f=s.scaleF&&s.scaleF<1?s.scaleF:1;
-      wk.days[d]={...(f<1?scaleReps(alt,f):alt), autoBase:s.autoBase, opts:s.opts, swapped:true, optional:s.optional, note:s.optional?s.note:alt.note, am:s.am};
+      wk.days[d]={...(f<1?scaleReps(alt,f):alt), autoBase:s.autoBase, opts:s.opts, swapped:true, optional:s.optional, note:s.optional||s.pm?s.note:alt.note, am:s.am, pm:s.pm};
     });
     for(const wk of weeks) wk.total=Math.round(wk.days.filter(Boolean).reduce((a,s)=>a+sessKm(s),0));
     if(usedExtra) warn.push(`A quality day fell on a rest day or the long run day, so ${DAYS[qd[qd.length-1]]} is used as a quality day in some weeks.`);
@@ -1136,6 +1155,7 @@ ol.ex span.d{display:block;color:var(--muted)}
     }
     const hrs=hr[s.hr]?hr[s.hr]():''; const notes=[]; if(s.am) notes.push(`Morning: ${s.am} km easy run; this session (${r05(sessKm(s)-s.am)} km) in the evening`); if(hrs) notes.push(`HR ${hrs}`); if(s.note) notes.push(s.note);
     if(notes.length) L.push('',notes.join('. '));
+    if(s.pm) L.push('','Evening session','',workoutText(s.pm));
     return L.join('\n');
   }
 
@@ -1148,19 +1168,19 @@ ol.ex span.d{display:block;color:var(--muted)}
     if(s.kind==='long') return ['Long run','--c-sup'];
     if(s.cat==='mlong') return ['MP long run','--c-race'];
     if(s.kind==='seg') return ['Long run + MP','--c-race'];
-    if(s.cat==='subt') return ['Sub-threshold','--c-subt'];
+    if(s.cat==='subt') return [s.pm?'Double sub-threshold':'Sub-threshold','--c-subt'];
     if(s.cat==='vo2') return ['VO2max','--c-vo2'];
     if(s.cat==='race') return ['Race-specific','--c-race'];
     return ['Race pace','--c-race'];
   }
   function weekSummary(days){
     const n={}; days.forEach(s=>{ if(!s) return; const t=typeOf(s)[0].replace(' + strides',''); n[t]=(n[t]||0)+1; });
-    const order=['Sub-threshold','Taper sub-threshold','VO2max','Race-specific','Race pace','MP long run','Long run + MP','Long run','Easy','Easy double','Race'];
+    const order=['Sub-threshold','Double sub-threshold','Taper sub-threshold','VO2max','Race-specific','Race pace','MP long run','Long run + MP','Long run','Easy','Easy double','Race'];
     return order.filter(k=>n[k]).map(k=>`${n[k]>1?n[k]+' × ':''}${k.toLowerCase().replace('vo2max','VO2max').replace(/\bmp\b/,'MP')}`).join(' · ');
   }
   function planWork(s){
     if(!s) return 0;
-    if(s.kind==='iv') return s.reps*(s.size.t ?? s.size.d*midP(s.pace)/1000);
+    if(s.kind==='iv') return s.reps*(s.size.t ?? s.size.d*midP(s.pace)/1000) + (s.pm?planWork(s.pm):0);
     if(s.kind==='seg') return s.segs.filter(x=>x[2]==='MP'||x[2]==='Work').reduce((a,[m,p])=>a+m*midP(p)/1000,0);
     if(s.kind==='blk') return s.steps.filter(x=>x.cue==='SubT').reduce((a,x)=>a+x.t,0);
     return 0;
@@ -1169,7 +1189,7 @@ ol.ex span.d{display:block;color:var(--muted)}
   function sessSec(s){
     if(!s) return 0;
     const e=midP(E);
-    if(s.kind==='iv') return (WU()+CD()+(s.am||0))*e + planWork(s) + Math.max(0,s.reps-1)*(s.rec.d ? s.rec.d/1000*(s.rec.float?e:e+30) : s.rec.t);
+    if(s.kind==='iv') return (WU()+CD()+(s.am||0))*e + planWork({...s,pm:null}) + Math.max(0,s.reps-1)*(s.rec.d ? s.rec.d/1000*(s.rec.float?e:e+30) : s.rec.t) + (s.pm?sessSec(s.pm):0);
     if(s.kind==='seg') return s.segs.reduce((a,[m,p])=>a+m*midP(p)/1000,0);
     if(s.kind==='blk') return s.steps.reduce((a,x)=>a+x.t,0);
     if(s.kind==='race') return s.km*midP(s.pace);
@@ -1199,7 +1219,7 @@ ol.ex span.d{display:block;color:var(--muted)}
     let h=`<section class="panel"><h3 style="margin-top:0">${RNAME[dist]} on ${fmtDay(PLAN.race)}: ${nW} weeks, ${sum} km</h3>
       <p class="hint" style="margin:0 0 10px">Base ${PLAN.base} · transition ${PLAN.trans} · specific ${PLAN.spec} · taper ${PLAN.taper} weeks. Paces from VDOT ${S.vd.toFixed(1)}; race pace ${mmss(u(R(+dist)))}${uLbl()}. Volume grows ${PLAN.incP}% a week from ${PLAN.cur} km to a peak of ${peak} km; every 4th week is lighter. 3 sub-threshold days need 50+ km a week.</p>
       ${(()=>{ const rg=ph=>{ const ps=weeks.filter(w=>ph.includes(w.phase)).map(w=>qStats(w.days).pc); return ps.length ? (Math.min(...ps)===Math.max(...ps) ? `${ps[0]}%` : `${Math.min(...ps)}–${Math.max(...ps)}%`) : '–'; };
-        return `<p class="hint" style="margin:0 0 10px">Quality work is the time in the work reps and MP blocks, not warm-ups or recoveries, as a share of the week's running time. Base and transition: ${Q_AIM[0]}–${Q_AIM[1]}% (this plan ${rg(['Base','Transition'])}). Specific phase: one race-specific session a week (for a marathon, the MP long run) plus 1 or 2 sub-threshold sessions, at most ${Q_CAP}% (this plan ${rg(['Specific'])}). A 5K week under ${Q_AIM[0]}% gets Bakken 45/15s as a short extra sub-threshold session. In a low-volume marathon plan that stays over ${Q_CAP}%, the sub-threshold session is marked optional: run it only if you have recovered from the MP long run. Over the limit, sub-threshold sessions are shortened first, then one is dropped: base weeks go from 3 to 2 sub-threshold days, specific weeks from 2 to 1 only when two sessions of about 20 minutes still do not fit. In the specific phase a sub-threshold session is at most about 20 minutes of work. The race-specific session stays whole.</p>`; })()}
+        return `<p class="hint" style="margin:0 0 10px">Quality work is the time in the work reps and MP blocks, not warm-ups or recoveries, as a share of the week's running time. Base and transition: ${Q_AIM[0]}–${Q_AIM[1]}% (this plan ${rg(['Base','Transition'])}). Specific phase: one race-specific session a week (for a marathon, the MP long run) plus 1 or 2 sub-threshold sessions, at most ${Q_CAP}% (this plan ${rg(['Specific'])}). A 5K week under ${Q_AIM[0]}% gets Bakken 45/15s as a short extra sub-threshold session. In a low-volume marathon plan that stays over ${Q_CAP}%, the sub-threshold session is marked optional: run it only if you have recovered from the MP long run. Over the limit, sub-threshold sessions are shortened first, then one is dropped: base weeks go from 3 to 2 sub-threshold days, specific weeks from 2 to 1 only when two sessions of about 20 minutes still do not fit. In the specific phase a sub-threshold session is at most about 20 minutes of work. The race-specific session stays whole. Under ${Q_AIM[0]}%, sub-threshold sessions get longer first (up to 40 minutes of work; in the specific phase they stay about 20), then sub-threshold days become double days: a morning and an evening session of 20–30 minutes each.</p>`; })()}
       ${PLAN.warn.length?`<p class="pwarn">${PLAN.warn.map(esc).join(' ')}</p>`:''}
       <div class="vbars">${weeks.map(w=>`<div class="vb" title="Week ${w.w+1}: ${w.total} km" style="--h:${Math.round(w.total/mx*100)}%;--dot:var(${phaseCol[w.phase]})"><span>${w.total}</span></div>`).join('')}</div>
       <div class="vleg">${Object.entries(phaseCol).map(([k,c])=>`<span style="--dot:var(${c})"><i></i>${k}</span>`).join('')}</div></section>`;
@@ -1214,9 +1234,10 @@ ol.ex span.d{display:block;color:var(--muted)}
         const title = s.opts&&s.opts.length>1
           ? `<select class="swap" data-date="${ymd(date)}" data-auto="${esc(s.autoBase)}" aria-label="Session on ${fmtDay(date)}">${s.opts.map(o=>`<option value="${esc(o.v)}"${o.v===cur?' selected':''}>${esc(o.l)}${o.v===s.autoBase?' (plan)':''}</option>`).join('')}</select>${s.name!==cur?` <span class="hint">${s.scaleF>1?'':'shortened to '}${esc(shown(s))} this week</span>`:''}`
           : `<b>${esc(shown(s))}</b>`;
-        h+=`<div class="pday${s.kind==='race'?' race':''}${s.swapped?' swapped':''}"><span class="pd">${fmtDay(date)}</span><div><span class="ptype" style="--dot:var(${typeOf(s)[1]})">${typeOf(s)[0]}</span>${title}${s.optional?' <span class="tag" style="margin:0">optional</span>':''}${s.am?' <span class="tag" style="margin:0">+ morning easy</span>':''} <span class="hint">· ${km} km${s.am?' that day':''}</span>
-          <div class="hint">${planWork(s)?`<b>${Math.round(planWork(s)/60)} min work</b> · `:''}${s.kind==='iv'?(()=>{ const sk=r05(km-(s.am||0)), main=Math.max(0,Math.round((sk-WU()-CD())*10)/10);
-            return `${s.am?`<b>Morning ${s.am} km easy</b> · evening `:''}<b>session ${sk} km</b> (${[WU()?`${WU()} km warm-up`:'',`${main} km reps and recoveries`,CD()?`${CD()} km cool-down`:''].filter(Boolean).join(' + ')}) · `; })():''}${s.second?`<b>${s.km} km + second run ${s.second} km</b> later in the day · `:''}${pace}${hrs?` · HR ${hrs}`:''}${s.note?` · ${esc(s.note)}`:''}</div>
+        h+=`<div class="pday${s.kind==='race'?' race':''}${s.swapped?' swapped':''}"><span class="pd">${fmtDay(date)}</span><div><span class="ptype" style="--dot:var(${typeOf(s)[1]})">${typeOf(s)[0]}</span>${title}${s.optional?' <span class="tag" style="margin:0">optional</span>':''}${s.am?' <span class="tag" style="margin:0">+ morning easy</span>':''} <span class="hint">· ${km} km${s.am||s.pm?' that day':''}</span>
+          <div class="hint">${planWork(s)?`<b>${s.pm?`${Math.round(planWork({...s,pm:null})/60)} + ${Math.round(planWork(s.pm)/60)}`:Math.round(planWork(s)/60)} min work</b> · `:''}${s.kind==='iv'?(()=>{ const sk=r05(km-(s.am||0)-(s.pm?sessKm(s.pm):0)), main=Math.max(0,Math.round((sk-WU()-CD())*10)/10);
+            return `${s.am?`<b>Morning ${s.am} km easy</b> · evening `:''}${s.pm?'<b>Morning</b> ':''}<b>session ${sk} km</b> (${[WU()?`${WU()} km warm-up`:'',`${main} km reps and recoveries`,CD()?`${CD()} km cool-down`:''].filter(Boolean).join(' + ')}) · `; })():''}${s.second?`<b>${s.km} km + second run ${s.second} km</b> later in the day · `:''}${pace}${hrs?` · HR ${hrs}`:''}${s.note?` · ${esc(s.note)}`:''}</div>
+          ${s.pm?`<div class="hint"><b>Evening: ${esc(shown(s.pm))}</b> · ${Math.round(planWork(s.pm)/60)} min work · session ${sessKm(s.pm)} km · ${rng(s.pm.pace[0],s.pm.pace[1])}${uLbl()} (${s.pm.lab})</div>`:''}
           ${s.kind!=='easy'&&s.kind!=='long'?`<details class="wtxt"><summary>Workout text</summary><pre>${esc(workoutText(s))}</pre></details>`:''}</div></div>`;
       });
       h+='</section>';
