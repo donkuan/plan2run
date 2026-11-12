@@ -1107,7 +1107,7 @@ ol.ex span.d{display:block;color:var(--muted)}
       if(s.second) L.push('',`Second run (later in the day): ${s.second} km easy`);
       if(s.strides){ const n=/^\d+/.exec(s.name.split('+ ')[1]||'')?.[0]||6; L.push('',`Strides ${n}x`,`- 20s ${pStr([R(1500)-5,R(1500)+5])}`,'- Walk 40s'); }
     }
-    const hrs=hr[s.hr]?hr[s.hr]():''; const notes=[]; if(s.am) notes.push(`Morning: ${s.am} km easy run; this session in the evening`); if(hrs) notes.push(`HR ${hrs}`); if(s.note) notes.push(s.note);
+    const hrs=hr[s.hr]?hr[s.hr]():''; const notes=[]; if(s.am) notes.push(`Morning: ${s.am} km easy run; this session (${r05(sessKm(s)-s.am)} km) in the evening`); if(hrs) notes.push(`HR ${hrs}`); if(s.note) notes.push(s.note);
     if(notes.length) L.push('',notes.join('. '));
     return L.join('\n');
   }
@@ -1183,8 +1183,9 @@ ol.ex span.d{display:block;color:var(--muted)}
         const title = s.opts&&s.opts.length>1
           ? `<select class="swap" data-date="${ymd(date)}" data-auto="${esc(s.autoBase)}" aria-label="Session on ${fmtDay(date)}">${s.opts.map(o=>`<option value="${esc(o.v)}"${o.v===cur?' selected':''}>${esc(o.l)}${o.v===s.autoBase?' (plan)':''}</option>`).join('')}</select>${s.name!==cur?` <span class="hint">${s.scaleF>1?'':'shortened to '}${esc(shown(s))} this week</span>`:''}`
           : `<b>${esc(shown(s))}</b>`;
-        h+=`<div class="pday${s.kind==='race'?' race':''}${s.swapped?' swapped':''}"><span class="pd">${fmtDay(date)}</span><div><span class="ptype" style="--dot:var(${typeOf(s)[1]})">${typeOf(s)[0]}</span>${title}${s.optional?' <span class="tag" style="margin:0">optional</span>':''}${s.am?' <span class="tag" style="margin:0">+ morning easy</span>':''} <span class="hint">· ${km} km</span>
-          <div class="hint">${planWork(s)?`<b>${Math.round(planWork(s)/60)} min work</b> · `:''}${s.kind==='iv'&&(WU()||CD())?`${WU()} km warm-up, ${CD()} km cool-down · `:''}${s.second?`<b>${s.km} km + second run ${s.second} km</b> later in the day · `:''}${s.am?`<b>Morning: ${s.am} km easy</b>, this session in the evening · `:''}${pace}${hrs?` · HR ${hrs}`:''}${s.note?` · ${esc(s.note)}`:''}</div>
+        h+=`<div class="pday${s.kind==='race'?' race':''}${s.swapped?' swapped':''}"><span class="pd">${fmtDay(date)}</span><div><span class="ptype" style="--dot:var(${typeOf(s)[1]})">${typeOf(s)[0]}</span>${title}${s.optional?' <span class="tag" style="margin:0">optional</span>':''}${s.am?' <span class="tag" style="margin:0">+ morning easy</span>':''} <span class="hint">· ${km} km${s.am?' that day':''}</span>
+          <div class="hint">${planWork(s)?`<b>${Math.round(planWork(s)/60)} min work</b> · `:''}${s.kind==='iv'?(()=>{ const sk=r05(km-(s.am||0)), main=Math.max(0,Math.round((sk-WU()-CD())*10)/10);
+            return `${s.am?`<b>Morning ${s.am} km easy</b> · evening `:''}<b>session ${sk} km</b> (${[WU()?`${WU()} km warm-up`:'',`${main} km reps and recoveries`,CD()?`${CD()} km cool-down`:''].filter(Boolean).join(' + ')}) · `; })():''}${s.second?`<b>${s.km} km + second run ${s.second} km</b> later in the day · `:''}${pace}${hrs?` · HR ${hrs}`:''}${s.note?` · ${esc(s.note)}`:''}</div>
           ${s.kind!=='easy'&&s.kind!=='long'?`<details class="wtxt"><summary>Workout text</summary><pre>${esc(workoutText(s))}</pre></details>`:''}</div></div>`;
       });
       h+='</section>';
