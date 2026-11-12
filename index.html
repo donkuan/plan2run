@@ -858,13 +858,26 @@ ol.ex span.d{display:block;color:var(--muted)}
     if(s.kind==='blk') return r05(s.steps.reduce((a,x)=>a+x.t/midP(x.pace),0));
     return (s.km||0)+(s.second||0);
   }
+  // double sub-threshold days: morning sessions have reps of 6 min or longer, evening sessions reps of 3 min or shorter
+  const repLen = s => s.size ? (s.size.t ?? s.size.d*midP(s.pace)/1000) : 0;
+  const amPool = t => catOptions(t,'subt').filter(s=>repLen(s)>=360);
+  const pmPool = t => catOptions(t,'subt').filter(s=>repLen(s)<=180);
+  // a session scaled to a set amount of work (seconds)
+  const toWork = (s,t) => {
+    const wk=planWork(s); if(!wk) return s;
+    let r=scaleReps(s, t/wk);
+    // long time reps that overshoot (3 × 17 min to 30 min): two shorter reps instead
+    if(s.size&&s.size.t&&planWork(r)>t*1.12){ const n=Math.max(2,Math.round(t/s.size.t)), st=Math.max(120,Math.round(t/n/60)*60);
+      r={...s, reps:n, size:{t:st}, name:s.name.replace(/^\d+ × [\d.]+ ?(km|min|m|s)/, `${n} × ${st/60} min`), base:s.base||s.name, scaleF:t/wk}; }
+    return {...r, note:s.note};
+  };
   // shorten a session: fewer reps, or shorter reps once it is down to 2 (2 × 8 km becomes 2 × 5 km)
   const scaleReps = (s,f) => {
     const want=s.reps*f, base=s.base||s.name, scaleF=(s.scaleF||1)*f;
     if(!s.size || f>=1 || (s.reps>2 && want>=1.5)){ const n=Math.max(2,Math.round(want)); return {...s, reps:n, name:s.name.replace(/^\d+/, String(n)), base, scaleF}; }
     const size = s.size.d ? {d:Math.max(1000, Math.round(s.size.d*want/2/500)*500)} : {t:Math.max(120, Math.round(s.size.t*want/2/60)*60)};
     const lbl = size.d ? `${+(size.d/1000).toFixed(1)} km` : `${size.t/60} min`;
-    return {...s, reps:2, size, name:s.name.replace(/^\d+ × [\d.]+ ?(km|m|min|s)/, `2 × ${lbl}`), base, scaleF};
+    return {...s, reps:2, size, name:s.name.replace(/^\d+ × [\d.]+ ?(km|min|m|s)/, `2 × ${lbl}`), base, scaleF};
   };
   const easy = (km, extra) => ({kind:'easy', name: extra ? `Easy run + ${extra}` : 'Easy run', km:r05(km), pace:E, lab:'easy pace', hr:'easy', strides: !!extra});
 
@@ -997,11 +1010,10 @@ ol.ex span.d{display:block;color:var(--muted)}
       } else q.forEach((d,i)=>{ if(Q[i]) days[d]={...Q[i]}; });
       // double sub-threshold days: the session in the morning and a second one in the evening, each 20-30 min of work
       if(dbl){
-        const toWork=(s,t)=>{ const wk=planWork(s); return wk ? {...scaleReps(s, t/wk), note:s.note} : s; };
+        const AM=amPool(T_), PM=pmPool(T_);
         [0,1,2,3,4,5,6].filter(d=>days[d]&&days[d].kind==='iv'&&days[d].cat==='subt').slice(0,dbl).forEach((d,i)=>{
-          const a=days[d], pool=[...T_.subShort,...T_.subLong], p0=pool[(w+i+1)%pool.length];
-          const pmT=(p0.base||p0.name)===(a.base||a.name) ? pool[(w+i+2)%pool.length] : p0;
-          days[d]={...toWork(a,dblT), pm:toWork(pmT,dblT), note:'Double threshold day: one session in the morning, the other in the evening; both controlled, the second no faster than the first.'};
+          const a=days[d], amT=AM.find(t=>t.name===(a.base||a.name)) || AM[(w+i)%AM.length], pmT=PM[(w+i)%PM.length];
+          days[d]={...toWork(amT,dblT), dblT, pm:{...toWork(pmT,dblT), dblT}, note:'Double threshold day: the longer reps in the morning, the short reps in the evening; both controlled, the second no faster than the first.'};
         });
       }
       // long run
@@ -1109,14 +1121,20 @@ ol.ex span.d{display:block;color:var(--muted)}
     // sessions you swapped (same category only)
     for(const wk of weeks) wk.days.forEach((s,d)=>{
       if(!s||!s.cat) return;
-      const key=ymd(addD(wk.start,d)), opts=catOptions(T_,s.cat); s.autoBase=s.base||s.name; s.opts=opts.map(o=>({v:o.name, l:shown(o)}));
+      const key=ymd(addD(wk.start,d)), opts=s.pm ? amPool(T_) : catOptions(T_,s.cat); s.autoBase=s.base||s.name; s.opts=opts.map(o=>({v:o.name, l:shown(o)}));
+      // double day: the evening session has its own choice (short reps only)
+      if(s.pm){
+        const po=pmPool(T_), pm=s.pm; pm.autoBase=pm.base||pm.name; pm.opts=po.map(o=>({v:o.name, l:shown(o)}));
+        const pp=P.swaps[key+'|pm'], palt=pp&&pp!==pm.autoBase&&po.find(o=>o.name===pp);
+        if(palt) s.pm={...toWork(palt,s.dblT), dblT:s.dblT, autoBase:pm.autoBase, opts:pm.opts, swapped:true};
+      }
       // one running-tab row can cover two plan sessions (4 × 8 min or 3 × 10 min): keep them apart
       const dup=s.opts.filter(o=>s.opts.filter(x=>x.l===o.l).length>1);
       dup.forEach(o=>{ if(o.l!==o.v) o.l=`${o.l} (${o.v})`; });
       const pick=P.swaps[key]; if(!pick||pick===s.autoBase) return;
       const alt=opts.find(o=>o.name===pick); if(!alt) return;
       const f=s.scaleF&&s.scaleF<1?s.scaleF:1;
-      wk.days[d]={...(f<1?scaleReps(alt,f):alt), autoBase:s.autoBase, opts:s.opts, swapped:true, optional:s.optional, note:s.optional||s.pm?s.note:alt.note, am:s.am, pm:s.pm};
+      wk.days[d]={...(s.dblT?toWork(alt,s.dblT):f<1?scaleReps(alt,f):alt), autoBase:s.autoBase, opts:s.opts, swapped:true, optional:s.optional, note:s.optional||s.pm?s.note:alt.note, am:s.am, pm:wk.days[d].pm, dblT:s.dblT};
     });
     for(const wk of weeks) wk.total=Math.round(wk.days.filter(Boolean).reduce((a,s)=>a+sessKm(s),0));
     if(usedExtra) warn.push(`A quality day fell on a rest day or the long run day, so ${DAYS[qd[qd.length-1]]} is used as a quality day in some weeks.`);
@@ -1239,7 +1257,7 @@ ol.ex span.d{display:block;color:var(--muted)}
         h+=`<div class="pday${s.kind==='race'?' race':''}${s.swapped?' swapped':''}"><span class="pd">${fmtDay(date)}</span><div><span class="ptype" style="--dot:var(${typeOf(s)[1]})">${typeOf(s)[0]}</span>${title}${s.optional?' <span class="tag" style="margin:0">optional</span>':''}${s.am?' <span class="tag" style="margin:0">+ morning easy</span>':''} <span class="hint">· ${km} km${s.am||s.pm?' that day':''}</span>
           <div class="hint">${planWork(s)?`<b>${s.pm?`${Math.round(planWork({...s,pm:null})/60)} + ${Math.round(planWork(s.pm)/60)}`:Math.round(planWork(s)/60)} min work</b> · `:''}${s.kind==='iv'?(()=>{ const sk=r05(km-(s.am||0)-(s.pm?sessKm(s.pm):0)), main=Math.max(0,Math.round((sk-WU()-CD())*10)/10);
             return `${s.am?`<b>Morning ${s.am} km easy</b> · evening `:''}${s.pm?'<b>Morning</b> ':''}<b>session ${sk} km</b> (${[WU()?`${WU()} km warm-up`:'',`${main} km reps and recoveries`,CD()?`${CD()} km cool-down`:''].filter(Boolean).join(' + ')}) · `; })():''}${s.second?`<b>${s.km} km + second run ${s.second} km</b> later in the day · `:''}${pace}${hrs?` · HR ${hrs}`:''}${s.note?` · ${esc(s.note)}`:''}</div>
-          ${s.pm?`<div class="hint"><b>Evening: ${esc(shown(s.pm))}</b> · ${Math.round(planWork(s.pm)/60)} min work · session ${sessKm(s.pm)} km · ${rng(s.pm.pace[0],s.pm.pace[1])}${uLbl()} (${s.pm.lab})</div>`:''}
+          ${s.pm?`<div class="hint"><b>Evening:</b> ${s.pm.opts&&s.pm.opts.length>1?`<select class="swap" data-date="${ymd(date)}|pm" data-auto="${esc(s.pm.autoBase)}" aria-label="Evening session on ${fmtDay(date)}">${s.pm.opts.map(o=>`<option value="${esc(o.v)}"${o.v===(s.pm.base||s.pm.name)?' selected':''}>${esc(o.l)}${o.v===s.pm.autoBase?' (plan)':''}</option>`).join('')}</select> <b>${esc(shown(s.pm))}</b>`:`<b>${esc(shown(s.pm))}</b>`} · ${Math.round(planWork(s.pm)/60)} min work · session ${sessKm(s.pm)} km · ${rng(s.pm.pace[0],s.pm.pace[1])}${uLbl()} (${s.pm.lab})</div>`:''}
           ${s.kind!=='easy'&&s.kind!=='long'?`<details class="wtxt"><summary>Workout text</summary><pre>${esc(workoutText(s))}</pre></details>`:''}</div></div>`;
       });
       h+='</section>';
