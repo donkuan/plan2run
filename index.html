@@ -862,8 +862,10 @@ ol.ex span.d{display:block;color:var(--muted)}
   const repLen = s => s.size ? (s.size.t ?? s.size.d*midP(s.pace)/1000) : 0;
   const amPool = t => catOptions(t,'subt').filter(s=>repLen(s)>=360);
   const pmPool = t => catOptions(t,'subt').filter(s=>repLen(s)<=180);
-  // the morning session of a double day runs slower, towards LT1 (30K to marathon pace); the evening one at its usual pace
-  const amPace = () => ({pace:[R(30000), R(42195)], lab:'30K–marathon pace, towards LT1', hr:'mp'});
+  // the morning session of a double day runs slower than it would on its own (about 8-10 s/km), towards LT1
+  // (taken as just slower than marathon pace) and never slower than that; the evening one keeps its usual pace
+  const amPace = s => { const lt1=R(42195)+8, a=Math.min(s.pace[0],s.pace[1]), b=Math.max(s.pace[0],s.pace[1]);
+    return {pace:[Math.min(a+8, lt1-5), Math.min(b+10, lt1)], lab:'towards LT1, slower than on its own', hr:'mp'}; };
   // a session scaled to a set amount of work (seconds)
   const toWork = (s,t) => {
     const wk=planWork(s); if(!wk) return s;
@@ -1015,7 +1017,7 @@ ol.ex span.d{display:block;color:var(--muted)}
         const AM=amPool(T_), PM=pmPool(T_);
         [0,1,2,3,4,5,6].filter(d=>days[d]&&days[d].kind==='iv'&&days[d].cat==='subt').slice(0,dbl).forEach((d,i)=>{
           const a=days[d], amT=AM.find(t=>t.name===(a.base||a.name)) || AM[(w+i)%AM.length], pmT=PM[(w+i)%PM.length];
-          days[d]={...toWork(amT,dblT), ...amPace(), dblT, pm:{...toWork(pmT,dblT), dblT}, note:'Double threshold day: the longer reps in the morning, relaxed towards LT1; the short reps in the evening at normal sub-threshold pace. Both controlled.'};
+          days[d]={...toWork(amT,dblT), ...amPace(amT), dblT, pm:{...toWork(pmT,dblT), dblT}, note:'Double threshold day: the longer reps in the morning, relaxed towards LT1; the short reps in the evening at normal sub-threshold pace. Both controlled.'};
         });
       }
       // long run
@@ -1136,7 +1138,7 @@ ol.ex span.d{display:block;color:var(--muted)}
       const pick=P.swaps[key]; if(!pick||pick===s.autoBase) return;
       const alt=opts.find(o=>o.name===pick); if(!alt) return;
       const f=s.scaleF&&s.scaleF<1?s.scaleF:1;
-      wk.days[d]={...(s.dblT?{...toWork(alt,s.dblT), ...amPace()}:f<1?scaleReps(alt,f):alt), autoBase:s.autoBase, opts:s.opts, swapped:true, optional:s.optional, note:s.optional||s.pm?s.note:alt.note, am:s.am, pm:wk.days[d].pm, dblT:s.dblT};
+      wk.days[d]={...(s.dblT?{...toWork(alt,s.dblT), ...amPace(alt)}:f<1?scaleReps(alt,f):alt), autoBase:s.autoBase, opts:s.opts, swapped:true, optional:s.optional, note:s.optional||s.pm?s.note:alt.note, am:s.am, pm:wk.days[d].pm, dblT:s.dblT};
     });
     for(const wk of weeks) wk.total=Math.round(wk.days.filter(Boolean).reduce((a,s)=>a+sessKm(s),0));
     if(usedExtra) warn.push(`A quality day fell on a rest day or the long run day, so ${DAYS[qd[qd.length-1]]} is used as a quality day in some weeks.`);
