@@ -312,6 +312,7 @@ ol.ex span.d{display:block;color:var(--muted)}
         <label class="hint">Runs per week<select id="pRuns" data-k="runs"><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option></select></label>
         <label class="hint">Current km per week<input type="number" id="pCur" data-k="cur" min="10" max="250" step="1"></label>
         <label class="hint">Current long run (km)<input type="number" id="pLr" data-k="lr" min="0" max="40" step="0.5" inputmode="decimal" placeholder="auto"></label>
+        <label class="hint">Long run increase % (max 10 advised)<input type="number" id="pLri" data-k="lri" min="0" max="20" step="1" inputmode="decimal"></label>
         <label class="hint">Weekly increase % (max 10 advised)<input type="number" id="pInc" data-k="inc" min="0" max="20" step="1" inputmode="decimal"></label>
         <label class="hint">Sub-threshold days<select id="pSub" data-k="sub"><option value="2">2 a week</option><option value="3">3 a week (NSM)</option></select></label>
         <label class="hint">Quality days<select id="pQ" data-k="qdays"><option value="1,3,5">Tue · Thu · Sat</option><option value="0,2,4">Mon · Wed · Fri</option><option value="1,2,4">Tue · Wed · Fri</option><option value="1,3,6">Tue · Thu · Sun</option></select></label>
@@ -744,7 +745,7 @@ ol.ex span.d{display:block;color:var(--muted)}
   const monday = d => addD(d, -((d.getDay()+6)%7));
   const fmtDay = d => `${DAYS[(d.getDay()+6)%7]} ${d.getDate()} ${d.toLocaleDateString('en-GB',{month:'short'})}`;
   const today0 = () => { const n=new Date(); return new Date(n.getFullYear(),n.getMonth(),n.getDate()); };
-  S.plan=Object.assign({dist:'42195', race:'', start:'', runs:'5', cur:'50', inc:'5', sub:'3', long:'6', qdays:'1,3,5', rest:'', wu:'3', cd:'2', lr:''}, S.plan||{});
+  S.plan=Object.assign({dist:'42195', race:'', start:'', runs:'5', cur:'50', inc:'5', sub:'3', long:'6', qdays:'1,3,5', rest:'', wu:'3', cd:'2', lr:'', lri:'10'}, S.plan||{});
   if(!S.plan.swaps||typeof S.plan.swaps!=='object') S.plan.swaps={};
   if(!parseYmd(S.plan.start)) S.plan.start=ymd(addD(monday(today0()),7));
   if(!parseYmd(S.plan.race)) S.plan.race=ymd(addD(parseYmd(S.plan.start),7*15+6));
@@ -901,14 +902,17 @@ ol.ex span.d{display:block;color:var(--muted)}
     // qd keeps your own picks first; extra days are only used when a week needs more quality days than you picked
     let usedExtra=false;
     const capL={'5000':16,'10000':18,'21097.5':22,'42195':30}[dist];
-    // your current long run: week 1 starts there and it grows at most 2 km a week (empty: the plan sets it from the weekly km)
+    // your current long run: week 1 starts there (empty: the plan sets it from the weekly km);
+    // after that the long run grows by at most your long run increase a week
     const lr0=(x=>isNaN(x)?0:Math.min(40,Math.max(0,x)))(parseFloat(String(P.lr??'').replace(',','.')));
+    const lriP=(x=>isNaN(x)?10:Math.min(20,Math.max(0,x)))(parseFloat(String(P.lri??'').replace(',','.'))), lri=lriP/100;
+    if(lriP>10) warn.push(`A long run increase of ${lriP}% a week is more than the advised 10%.`);
     let lastLong=lr0, lrWarned=false, lrCapped=false;
     const weeks=[]; let specK=0;
     for(let w=0;w<nW;w++){
       // lighter weeks only in base and transition, so the race-specific long runs are never cut
       const phase=phaseOf(w), deload=(w+1)%4===0 && w<base+trans;
-      const longCap = !lr0 ? Infinity : w===0 ? lr0 : deload ? Math.max(6, r05(lastLong*0.8)) : r05(lastLong+2);
+      const longCap = w===0 ? (lr0||Infinity) : deload ? Math.max(6, r05(lastLong*0.8)) : Math.max(lastLong+(lri?0.5:0), r05(lastLong*(1+lri)));
       if(longCap < Math.min(capL, r05(vol[w]*(isM?0.3:0.27))) && !deload) lrCapped=true;
       // taper from the volume the plan actually reached, not the target it could not hold
       if(w>peakIdx){ const held=Math.max(...weeks.map(x=>x.days.reduce((a,s)=>a+(s?sessKm(s):0),0))); vol[w]=Math.min(vol[w], Math.round(held*(w===nW-1?((isM||isHM)?0.45:0.6):0.7))); }
@@ -984,7 +988,7 @@ ol.ex span.d{display:block;color:var(--muted)}
       // marathon long runs by weeks to race: the biggest (30 km, 14 km at MP) 4 weeks out, never closer;
       // the last one before the taper is the shorter 2 x 8 km session
       if(phase==='Specific' && isM){ const k=nW-1-w-taper; L=T_.mlong[[2,3,1,0][k] ?? 0]; }
-      else if(phase==='Taper') L={kind:'long',name:'Long run',km:isM||isHM?Math.min(isM?20:14, lr0?lastLong:99, Math.max(8, r05(vol[w]*0.45))):r05(longKm*0.65),pace:E,lab:'easy pace',hr:'easy'};
+      else if(phase==='Taper') L={kind:'long',name:'Long run',km:isM||isHM?Math.min(isM?20:14, lastLong||99, Math.max(8, r05(vol[w]*0.45))):r05(longKm*0.65),pace:E,lab:'easy pace',hr:'easy'};
       else L={kind:'long',name:'Long run',km:longKm,pace:E,lab:'easy pace',hr:'easy'};
       days[longDay]=L;
       // easy days
@@ -1054,10 +1058,10 @@ ol.ex span.d{display:block;color:var(--muted)}
         }
         for(let d=0;d<rd;d++) if(days[d]&&days[d].kind==='iv') days[d]=easy(6);
       }
-      if(lr0 && days[longDay]){
+      if(days[longDay]){
         const lk=sessKm(days[longDay]);
-        if(phase==='Specific' && isM && lrCapped && !lrWarned && lk>lastLong+4){ lrWarned=true; warn.push(`Your long run builds to ${lastLong} km before the specific phase, but the marathon long runs with MP are ${lk} km and more. Start the plan earlier or with a longer current long run, or keep those weeks' long runs shorter.`); }
-        if(!deload && phase!=='Taper') lastLong=Math.max(lastLong, lk);
+        if(phase==='Specific' && isM && lrCapped && !lrWarned && lk>lastLong+4){ lrWarned=true; warn.push(`Your long run builds to ${lastLong} km before the specific phase (${lriP}% a week), but the marathon long runs with MP are ${lk} km and more. Start the plan earlier, enter a longer current long run or a bigger long run increase, or keep those weeks' long runs shorter.`); }
+        if(phase!=='Taper' && (!deload || w===0)) lastLong=Math.max(lastLong, lk);
       }
       weeks.push({w, phase, deload, start:ws, days});
     }
